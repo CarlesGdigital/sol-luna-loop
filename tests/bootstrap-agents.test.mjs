@@ -9,6 +9,7 @@ import test from "node:test";
 import { fileURLToPath } from "node:url";
 
 import { acquireExclusiveLock } from "../scripts/lib/fs-lock.mjs";
+import * as installerModule from "../scripts/lib/agent-installer.mjs";
 
 const repositoryRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const scriptPath = path.join(repositoryRoot, "scripts", "bootstrap-agents.mjs");
@@ -287,6 +288,26 @@ test("managed update creates a verified recoverable backup", async () => {
   });
 });
 
+test("backup hash mismatch preserves the structured BACKUP_VERIFY_FAILED error", async () => {
+  await withRoots(async (root) => {
+    const runDirectory = path.join(root, "backup-run");
+    await assert.rejects(
+      () => installerModule.__createBackupForTest({
+        runDirectory,
+        fileName: "mismatch.toml",
+        bytes: Buffer.from("backup bytes\n"),
+        expectedHash: "0".repeat(64),
+      }),
+      (error) => {
+        assert.equal(error?.code, "BACKUP_VERIFY_FAILED");
+        assert.match(error?.message ?? "", /mismatch\.toml/);
+        assert.doesNotMatch(error?.message ?? "", /ReferenceError|name is not defined/i);
+        return true;
+      },
+    );
+  });
+});
+
 test("a valid prior-version manifest upgrades without rewriting exact role files", async () => {
   await withRoots(async (root) => {
     assert.equal((await install(root, "--json")).code, 0);
@@ -346,6 +367,38 @@ test("a prior-version manifest plus a canonical change backs up agent and manife
   });
 });
 
+test("check and doctor report stale prior manifests until install upgrades them", async () => {
+  await withRoots(async (root) => {
+    assert.equal((await install(root, "--json")).code, 0);
+    const manifestPath = manifestFor(root);
+    const prior = JSON.parse(await readFile(manifestPath, "utf8"));
+    prior.pluginVersion = "0.0.9";
+    for (const role of roles) prior.agents[role].pluginVersion = "0.0.9";
+    await writeFile(manifestPath, `${JSON.stringify(prior, null, 2)}\n`);
+
+    const staleCheck = await runCli(["check", "--scope", "user", "--user-home", root, "--json"]);
+    assert.equal(staleCheck.code, 1);
+    const checkPayload = JSON.parse(staleCheck.stdout);
+    assert.equal(checkPayload.ok, false);
+    assert.ok(checkPayload.issues.some((issue) => issue.code === "MANIFEST_STALE"));
+
+    const staleDoctor = await runCli(["doctor", "--scope", "user", "--user-home", root, "--json"]);
+    assert.equal(staleDoctor.code, 1);
+    const doctorPayload = JSON.parse(staleDoctor.stdout);
+    assert.equal(doctorPayload.ok, false);
+    assert.ok(doctorPayload.issues.some((issue) => issue.code === "MANIFEST_STALE"));
+
+    const upgraded = await install(root, "--json");
+    assert.equal(upgraded.code, 0, upgraded.stderr);
+    const healthyCheck = await runCli(["check", "--scope", "user", "--user-home", root, "--json"]);
+    assert.equal(healthyCheck.code, 0, healthyCheck.stderr);
+    assert.equal(JSON.parse(healthyCheck.stdout).issues.some((issue) => issue.code === "MANIFEST_STALE"), false);
+    const healthyDoctor = await runCli(["doctor", "--scope", "user", "--user-home", root, "--json"]);
+    assert.equal(healthyDoctor.code, 0, healthyDoctor.stderr);
+    assert.equal(JSON.parse(healthyDoctor.stdout).issues.some((issue) => issue.code === "MANIFEST_STALE"), false);
+  });
+});
+
 test("malformed or inconsistent manifest plugin versions are refused", async () => {
   await withRoots(async (root) => {
     assert.equal((await install(root, "--json")).code, 0);
@@ -383,6 +436,32 @@ test("uninstall refuses an agents junction before touching its target", async ()
     assert.match(JSON.parse(result.stdout).error, /PATH_UNSAFE/);
     assert.equal(await exists(path.join(targetHome, ".codex", "agents", "sll_luna_probe.toml")), true);
     assert.equal(await exists(path.join(targetHome, ".codex", "agents", "sol-luna-loop.lock.json")), true);
+  });
+});
+
+test("install dry-run refuses an agents junction without creating or mutating anything", async () => {
+  await withRoots(async (root) => {
+    const targetHome = path.join(root, "target-home");
+    assert.equal((await install(targetHome, "--json")).code, 0);
+    const targetRole = targetFor(targetHome, roles[0]);
+    const targetManifest = manifestFor(targetHome);
+    const beforeRole = await readFile(targetRole);
+    const beforeManifest = await readFile(targetManifest);
+
+    const junctionHome = path.join(root, "junction-home");
+    await mkdir(path.join(junctionHome, ".codex"), { recursive: true });
+    const junctionPath = path.join(junctionHome, ".codex", "agents");
+    await symlink(path.join(targetHome, ".codex", "agents"), junctionPath, "junction");
+    const result = await runCli(["install", "--scope", "user", "--user-home", junctionHome, "--dry-run", "--json"]);
+    assert.equal(result.code, 2);
+    assert.match(JSON.parse(result.stdout).error, /PATH_UNSAFE/);
+
+    assert.deepEqual(await readFile(targetRole), beforeRole);
+    assert.deepEqual(await readFile(targetManifest), beforeManifest);
+    assert.equal(await exists(path.join(junctionHome, ".codex", "sol-luna-loop.lock.json")), false);
+    assert.equal(await exists(path.join(junctionHome, ".codex", "agents", ".sol-luna-loop.lock")), false);
+    const junctionStats = await lstat(junctionPath);
+    assert.equal(junctionStats.isSymbolicLink(), true);
   });
 });
 

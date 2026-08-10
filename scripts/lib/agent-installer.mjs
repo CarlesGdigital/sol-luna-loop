@@ -461,8 +461,14 @@ async function createBackup(runDirectory, fileName, bytes, expectedHash) {
   await writeFlushed(backupPath, bytes);
   const verified = await readFile(backupPath);
   const actual = sha256(verified);
-  if (actual !== expectedHash) throw installerError("BACKUP_VERIFY_FAILED", `${name}: backup hash verification failed`);
+  if (actual !== expectedHash) throw installerError("BACKUP_VERIFY_FAILED", `${fileName}: backup hash verification failed`);
   return backupPath;
+}
+
+// Narrow internal seam used by regression tests to exercise backup verification
+// without exposing a CLI-only fault-injection flag.
+export async function __createBackupForTest({ runDirectory, fileName, bytes, expectedHash }) {
+  return createBackup(runDirectory, fileName, bytes, expectedHash);
 }
 
 async function inspectRegularFileHash(filePath) {
@@ -511,6 +517,7 @@ export async function install({
   const templates = await loadTemplates(templateDirectory);
   const base = baseResult("install", paths, templates, dryRun);
   if (dryRun) {
+    await assertSafeExistingDirectory(paths.agentsDir);
     const state = await inspectState(paths, templates);
     if (state.manifestInfo.error) throw state.manifestInfo.error;
     const actionable = state.agents.some((agent) => ["missing", "missing-managed", "managed-update"].includes(agent.status));
@@ -646,6 +653,7 @@ export async function check({
   const issues = [];
   if (!state.manifestInfo.exists) issues.push({ code: "MANIFEST_MISSING", message: "managed manifest is missing" });
   else if (!state.manifestInfo.valid) issues.push({ code: "MANIFEST_INVALID", message: state.manifestInfo.error?.message ?? "managed manifest is invalid" });
+  else if (state.manifestInfo.manifest.pluginVersion !== PLUGIN_VERSION) issues.push({ code: "MANIFEST_STALE", message: `managed manifest pluginVersion ${state.manifestInfo.manifest.pluginVersion} is stale; run install to upgrade` });
   for (const agent of state.agents) {
     if (agent.status === "missing" || agent.status === "missing-managed") issues.push({ code: "AGENT_MISSING", name: agent.name, message: `${agent.name} is missing` });
     else if (agent.status === "conflict") issues.push({ code: "AGENT_CONFLICT", name: agent.name, reason: agent.reason, message: `${agent.name} is not safely managed` });
@@ -668,6 +676,7 @@ function doctorIssues(paths, state, lockState) {
   if (lockState.active) issues.push({ code: "LOCK_ACTIVE", message: `mutation lock is active at ${paths.lock}` });
   if (!state.manifestInfo.exists) issues.push({ code: "MANIFEST_MISSING", message: "managed manifest is missing" });
   else if (!state.manifestInfo.valid) issues.push({ code: "MANIFEST_INVALID", message: state.manifestInfo.error?.message ?? "managed manifest is invalid" });
+  else if (state.manifestInfo.manifest.pluginVersion !== PLUGIN_VERSION) issues.push({ code: "MANIFEST_STALE", message: `managed manifest pluginVersion ${state.manifestInfo.manifest.pluginVersion} is stale; run install to upgrade` });
   for (const agent of state.agents) {
     if (agent.status === "missing" || agent.status === "missing-managed") issues.push({ code: "AGENT_MISSING", name: agent.name, message: `${agent.name} is missing` });
     if (agent.status === "conflict") issues.push({ code: "AGENT_CONFLICT", name: agent.name, reason: agent.reason, message: `${agent.name} is a conflict` });

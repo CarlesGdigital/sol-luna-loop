@@ -6,10 +6,13 @@ The CLI is `node scripts/bootstrap-agents.mjs` and supports four actions:
   manifest ownership, creates verified backups for managed updates, publishes
   files atomically, and writes the lock manifest.
 * `check` is read-only exactness verification. It reports expected and actual
-  hashes, pins, file type, and whether each file is owned by the manifest.
+  hashes, pins, file type, and whether each file is owned by the manifest. A
+  valid manifest from an older plugin version is reported with the deterministic
+  `MANIFEST_STALE` issue until `install` rewrites it to the current version.
 * `doctor` is read-only environment and ownership diagnostics. Its top-level
   JSON keys are stable: `action`, `ok`, `scope`, `platform`, `node`, `paths`,
-  `lock`, `manifest`, `agents`, and `issues`.
+  `lock`, `manifest`, `agents`, and `issues`; it reports the same
+  `MANIFEST_STALE` issue for an older valid manifest.
 * `uninstall` removes only exact regular files whose current SHA-256 matches a
   manifest entry. Local modifications, foreign files, symlinks, and other
   non-files are preserved and reported as conflicts.
@@ -19,8 +22,11 @@ The CLI is `node scripts/bootstrap-agents.mjs` and supports four actions:
 The default scope is `user`, rooted at `os.homedir()`. User scope accepts
 `--user-home <path>` and project scope accepts `--project-root <path>`; the
 other path flag is rejected. `--dry-run` does not create a parent directory,
-lock, manifest, backup, or role file. `--json` writes exactly one JSON object
-to stdout and suppresses human output.
+lock, manifest, backup, or role file. It still validates every existing
+component of the agents path and returns `PATH_UNSAFE` for a symlink/junction
+or non-directory component, so a dry-run can never report a plan through an
+unsafe parent. `--json` writes exactly one JSON object to stdout and
+suppresses human output.
 
 ## Ownership and paths
 

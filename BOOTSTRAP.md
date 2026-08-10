@@ -32,8 +32,11 @@ node scripts/bootstrap-agents.mjs uninstall --scope project --project-root C:\te
 ```
 
 `--dry-run` performs discovery and reports what would change without creating
-directories, lock files, manifests, backups, or role files. `--json` emits one
-machine-readable object on stdout and never includes template bodies.
+directories, lock files, manifests, backups, or role files. Existing path
+components are still checked with `lstat`; an existing symlink/junction or
+non-directory component returns `PATH_UNSAFE` rather than following it. A
+nonexistent target root remains untouched. `--json` emits one machine-readable
+object on stdout and never includes template bodies.
 
 Supported actions are `install`, `check`, `doctor`, and `uninstall`. Scope paths
 are explicit: `--user-home` is valid only for user scope and `--project-root`
@@ -60,11 +63,13 @@ is a tampered conflict. Both cases are preserved. Uninstall removes only exact
 manifest-owned regular files; foreign files, symlinks, directories, and local
 edits remain in place and produce a nonzero conflict result.
 
-`check` verifies exact bytes, hashes, pins, and ownership without mutation.
-`doctor` is read-only and reports stable action, scope, platform, Node gate,
-paths, lock state, manifest validity, per-agent status, and deterministic issue
-codes. Runtime discovery in Codex is a separate gate and may require a fresh
-Codex task after installation.
+`check` verifies exact bytes, hashes, pins, and ownership without mutation. A
+valid prior-version manifest remains usable ownership evidence, but both
+`check` and `doctor` report deterministic `MANIFEST_STALE` and remain not-ok
+until `install` upgrades the manifest. `doctor` is read-only and reports stable
+action, scope, platform, Node gate, paths, lock state, manifest validity,
+per-agent status, and deterministic issue codes. Runtime discovery in Codex is a
+separate gate and may require a fresh Codex task after installation.
 
 The writing-role contracts are intentionally restrictive: implementer forbids
 merge, push, PR, and deploy actions; fixer must record changed hypotheses and
