@@ -83,3 +83,43 @@ test("template discovery rejects an extra sll_luna role while preserving the boo
   const bootstrap = await readFile(path.join(TEMPLATE_DIRECTORY, "sll_bootstrap_luna_max.toml"), "utf8");
   assert.match(bootstrap, /sll_bootstrap_luna_max/);
 });
+
+test("role contracts state the required safety and evidence boundaries", async () => {
+  const contracts = Object.fromEntries(
+    await Promise.all(DEFINITIVE_AGENTS.map(async (name) => [
+      name,
+      (await readFile(path.join(TEMPLATE_DIRECTORY, `${name}.toml`), "utf8")),
+    ])),
+  );
+  assert.match(contracts.sll_luna_implementer, /(?:no|forbid) (?:merge|push|PR|deploy)/i);
+  assert.match(contracts.sll_luna_fixer, /failed strategy/i);
+  assert.match(contracts.sll_luna_fixer, /new evidence/i);
+  assert.match(contracts.sll_luna_fixer, /hypothes(?:is|es)|failure fingerprint/i);
+  assert.match(contracts.sll_luna_test_engineer, /weakening/i);
+  assert.match(contracts.sll_luna_test_engineer, /manipulat/i);
+  assert.match(contracts.sll_luna_test_engineer, /skipping|skip/i);
+  assert.match(contracts.sll_luna_reviewer, /regression/i);
+  assert.match(contracts.sll_luna_reviewer, /maintainability/i);
+  assert.match(contracts.sll_luna_reviewer, /concurrency/i);
+  assert.match(contracts.sll_luna_reviewer, /bugs?/i);
+  for (const threat of [
+    "threat model",
+    "dependency audit",
+    "secret scanning",
+    "authentication",
+    "authorization",
+    "injection",
+    "XSS",
+    "CSRF",
+    "SSRF",
+    "path traversal",
+    "command injection",
+    "supply chain",
+    "symlink",
+    "TOCTOU",
+    "concurrency",
+    "applicable risks",
+  ]) {
+    assert.match(contracts.sll_luna_security_auditor, new RegExp(threat, "i"), `missing security contract term: ${threat}`);
+  }
+});

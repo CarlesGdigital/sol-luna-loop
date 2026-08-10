@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { lstat, mkdir, open, readFile, unlink } from "node:fs/promises";
+import { lstat, open, readFile, unlink } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
@@ -41,7 +41,6 @@ export async function inspectLock(lockPath) {
 }
 
 export async function acquireExclusiveLock(lockPath) {
-  await mkdir(path.dirname(lockPath), { recursive: true });
   let handle;
   try {
     handle = await open(lockPath, "wx", 0o600);
@@ -64,9 +63,32 @@ export async function acquireExclusiveLock(lockPath) {
       async release() {
         if (released) return;
         released = true;
-        await unlink(lockPath).catch((error) => {
-          if (error?.code !== "ENOENT") throw error;
-        });
+        let stats;
+        try {
+          stats = await lstat(lockPath);
+        } catch (error) {
+          throw lockError("LOCK_LOST", `lock owner token cannot be verified at ${lockPath}`, { cause: error?.code ?? "MISSING" });
+        }
+        if (stats.isSymbolicLink() || !stats.isFile()) {
+          throw lockError("LOCK_LOST", `lock owner token cannot be verified at ${lockPath}`, { cause: "UNSAFE_TYPE" });
+        }
+        let current;
+        try {
+          current = JSON.parse(await readFile(lockPath, "utf8"));
+        } catch (error) {
+          throw lockError("LOCK_LOST", `lock owner token cannot be verified at ${lockPath}`, { cause: error?.code ?? "MALFORMED" });
+        }
+        if (!current || current.token !== metadata.token) {
+          throw lockError("LOCK_LOST", `lock owner token changed at ${lockPath}`, { cause: "TOKEN_MISMATCH" });
+        }
+        try {
+          await unlink(lockPath);
+        } catch (error) {
+          if (error?.code === "ENOENT") {
+            throw lockError("LOCK_LOST", `lock owner token disappeared at ${lockPath}`, { cause: "MISSING" });
+          }
+          throw error;
+        }
       },
     };
   } catch (error) {

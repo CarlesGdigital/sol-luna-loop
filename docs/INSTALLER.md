@@ -40,9 +40,17 @@ never followed, replaced, or removed.
 
 Before replacing an exact owned file, the installer writes its old bytes to a
 same-directory temporary backup, flushes them, and verifies the SHA-256 against
-the manifest. New and replacement role files and the manifest are published
-only after their temporary bytes are flushed. An installation error rolls back
-complete files where possible; it never intentionally leaves partial bytes.
+the manifest. Managed manifest upgrades from an older valid `0.x.y` plugin
+version are accepted as ownership evidence, then rewrite the current manifest;
+the prior manifest is included in the verified backup run. New and replacement
+role files and the manifest are published only after their temporary bytes are
+flushed. An installation error rolls back complete role and manifest files
+where possible; it never intentionally leaves partial bytes.
+
+Uninstall validates every component of `<agents-dir>` with `lstat` before
+acquiring its lock. A symlink/junction or non-directory component returns the
+structured `PATH_UNSAFE` error and is never followed. After the lock is
+acquired, manifest and agent ownership are recomputed before any unlink.
 
 ## Runtime gate
 

@@ -8,11 +8,11 @@ All eight definitive templates pin `model = "gpt-5.6-luna"` and
 | --- | --- | --- |
 | `sll_luna_probe` | read-only | Minimal routing checks only; report observable evidence and blockers. |
 | `sll_luna_explorer` | read-only | Trace architecture, interfaces, and runtime evidence without edits. |
-| `sll_luna_implementer` | workspace-write | Make only explicitly owned bounded changes, with RED→GREEN tests and runtime evidence. |
-| `sll_luna_fixer` | workspace-write | Reproduce the failure, identify root cause, and test each new hypothesis before fixing. |
-| `sll_luna_test_engineer` | workspace-write | Add honest regressions, complete fixtures, and meaningful edge cases; avoid fake assertions. |
-| `sll_luna_reviewer` | read-only | Perform adversarial scope, correctness, safety, test, and evidence review. |
-| `sll_luna_security_auditor` | read-only | Audit path traversal, symlink/non-file confusion, TOCTOU/races, injection, secrets, privilege, and ownership. |
+| `sll_luna_implementer` | workspace-write | Make only explicitly owned bounded changes with RED→GREEN tests and runtime evidence; explicitly forbid merge, push, PR, and deploy actions. |
+| `sll_luna_fixer` | workspace-write | Reproduce the failure, identify root cause, record changed hypotheses/failure fingerprints, and never repeat a failed strategy without new evidence. |
+| `sll_luna_test_engineer` | workspace-write | Add honest regressions, complete fixtures, and meaningful edge cases; forbid weakening, manipulating, or skipping tests to hide bugs. |
+| `sll_luna_reviewer` | read-only | Perform adversarial regression, bug, maintainability, correctness, safety, test, evidence, and concurrency review. |
+| `sll_luna_security_auditor` | read-only | Apply a threat model, dependency audit, secret scanning, authentication/authorization review, injection/XSS/CSRF/SSRF/path-traversal/command-injection/supply-chain checks, and symlink/TOCTOU/concurrency/applicable-risk analysis. |
 | `sll_luna_docs_writer` | workspace-write | Documentation-only changes within explicit ownership; never implement code or configuration. |
 
 The repository-relative template origin recorded in the manifest is

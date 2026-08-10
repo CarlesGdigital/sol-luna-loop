@@ -31,6 +31,7 @@ export const EXPECTED_SANDBOXES = Object.freeze({
 });
 
 const SHA256_RE = /^[a-f0-9]{64}$/;
+const VERSION_RE = /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/;
 const TOP_LEVEL_KEYS = ["schemaVersion", "plugin", "pluginVersion", "scope", "generatedAt", "agents"];
 const AGENT_KEYS = ["name", "pluginVersion", "expectedModel", "expectedReasoning", "expectedSandbox", "sha256", "templateOrigin"];
 
@@ -63,6 +64,20 @@ function assertExactKeys(value, expected, label) {
   }
 }
 
+function parseVersion(value, label) {
+  if (typeof value !== "string" || !VERSION_RE.test(value)) {
+    throw manifestError("MANIFEST_INVALID", `${label} must be a semantic version string`);
+  }
+  return value.split(".").map((part) => Number.parseInt(part, 10));
+}
+
+function compareVersions(left, right) {
+  for (let index = 0; index < 3; index += 1) {
+    if (left[index] !== right[index]) return left[index] - right[index];
+  }
+  return 0;
+}
+
 export function validateManifest(manifest, { scope = undefined } = {}) {
   assertPlainObject(manifest, "manifest");
   assertExactKeys(manifest, TOP_LEVEL_KEYS, "manifest");
@@ -72,8 +87,9 @@ export function validateManifest(manifest, { scope = undefined } = {}) {
   if (manifest.plugin !== PLUGIN_NAME) {
     throw manifestError("MANIFEST_INVALID", `manifest plugin must be ${PLUGIN_NAME}`);
   }
-  if (manifest.pluginVersion !== PLUGIN_VERSION) {
-    throw manifestError("MANIFEST_INVALID", `manifest pluginVersion must be ${PLUGIN_VERSION}`);
+  const manifestVersion = parseVersion(manifest.pluginVersion, "manifest pluginVersion");
+  if (compareVersions(manifestVersion, parseVersion(PLUGIN_VERSION, "current pluginVersion")) > 0) {
+    throw manifestError("MANIFEST_INVALID", `manifest pluginVersion ${manifest.pluginVersion} is newer than ${PLUGIN_VERSION}`);
   }
   if (manifest.scope !== "user" && manifest.scope !== "project") {
     throw manifestError("MANIFEST_INVALID", "manifest scope must be user or project");
@@ -101,7 +117,9 @@ export function validateManifest(manifest, { scope = undefined } = {}) {
     assertPlainObject(entry, `manifest agent ${name}`);
     assertExactKeys(entry, AGENT_KEYS, `manifest agent ${name}`);
     if (entry.name !== name) throw manifestError("MANIFEST_INVALID", `manifest agent ${name} has mismatched name`);
-    if (entry.pluginVersion !== PLUGIN_VERSION) throw manifestError("MANIFEST_INVALID", `manifest agent ${name} has mismatched pluginVersion`);
+    const entryVersion = parseVersion(entry.pluginVersion, `manifest agent ${name} pluginVersion`);
+    if (entry.pluginVersion !== manifest.pluginVersion) throw manifestError("MANIFEST_INVALID", `manifest agent ${name} has mismatched pluginVersion`);
+    if (compareVersions(entryVersion, manifestVersion) !== 0) throw manifestError("MANIFEST_INVALID", `manifest agent ${name} has inconsistent pluginVersion`);
     if (entry.expectedModel !== "gpt-5.6-luna") throw manifestError("MANIFEST_INVALID", `manifest agent ${name} has an invalid model`);
     if (entry.expectedReasoning !== "max") throw manifestError("MANIFEST_INVALID", `manifest agent ${name} has an invalid reasoning effort`);
     if (entry.expectedSandbox !== EXPECTED_SANDBOXES[name]) throw manifestError("MANIFEST_INVALID", `manifest agent ${name} has an invalid sandbox`);

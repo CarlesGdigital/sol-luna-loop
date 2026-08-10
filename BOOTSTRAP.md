@@ -66,6 +66,16 @@ paths, lock state, manifest validity, per-agent status, and deterministic issue
 codes. Runtime discovery in Codex is a separate gate and may require a fresh
 Codex task after installation.
 
+The writing-role contracts are intentionally restrictive: implementer forbids
+merge, push, PR, and deploy actions; fixer must record changed hypotheses and
+failure fingerprints and never repeat a failed strategy without new evidence;
+test engineer forbids weakening, manipulating, or skipping tests; reviewer
+checks regressions, bugs, maintainability, and concurrency; and security
+auditor covers a threat model, dependency audit, secret scanning,
+authentication, authorization, injection, XSS, CSRF, SSRF, path traversal,
+command injection, supply chain, symlink/TOCTOU/concurrency, and applicable
+risks.
+
 ## Verification
 
 From the repository root:

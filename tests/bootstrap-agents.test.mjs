@@ -1,12 +1,14 @@
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import { constants as fsConstants } from "node:fs";
-import { access, mkdtemp, mkdir, readFile, readdir, rm, stat, lstat, writeFile } from "node:fs/promises";
+import { access, mkdtemp, mkdir, readFile, readdir, rm, stat, lstat, symlink, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { spawn } from "node:child_process";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
+
+import { acquireExclusiveLock } from "../scripts/lib/fs-lock.mjs";
 
 const repositoryRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const scriptPath = path.join(repositoryRoot, "scripts", "bootstrap-agents.mjs");
@@ -282,5 +284,145 @@ test("managed update creates a verified recoverable backup", async () => {
     const backup = path.join(backupRoot, backupRuns[0], `${role}.toml`);
     assert.deepEqual(await readFile(backup), old);
     assert.equal(createHash("sha256").update(await readFile(backup)).digest("hex"), manifest.agents[role].sha256);
+  });
+});
+
+test("a valid prior-version manifest upgrades without rewriting exact role files", async () => {
+  await withRoots(async (root) => {
+    assert.equal((await install(root, "--json")).code, 0);
+    const roleBytes = new Map();
+    for (const role of roles) roleBytes.set(role, await readFile(targetFor(root, role)));
+    const manifestPath = manifestFor(root);
+    const prior = JSON.parse(await readFile(manifestPath, "utf8"));
+    prior.pluginVersion = "0.0.9";
+    for (const role of roles) prior.agents[role].pluginVersion = "0.0.9";
+    await writeFile(manifestPath, `${JSON.stringify(prior, null, 2)}\n`);
+
+    const result = await install(root, "--json");
+    assert.equal(result.code, 0, result.stderr);
+    const payload = JSON.parse(result.stdout);
+    assert.equal(payload.ok, true);
+    assert.equal(payload.changed, true);
+    assert.equal(payload.manifest.pluginVersion, "0.1.0");
+    for (const role of roles) assert.deepEqual(await readFile(targetFor(root, role)), roleBytes.get(role));
+    const backupRuns = await readdir(path.join(agentsDir(root), ".sol-luna-loop-backups"));
+    assert.equal(backupRuns.length, 1);
+    assert.equal(await exists(path.join(agentsDir(root), ".sol-luna-loop-backups", backupRuns[0], "sol-luna-loop.lock.json")), true);
+  });
+});
+
+test("a prior-version manifest plus a canonical change backs up agent and manifest before upgrade", async () => {
+  await withRoots(async (root) => {
+    assert.equal((await install(root, "--json")).code, 0);
+    const role = roles[0];
+    const oldRole = await readFile(targetFor(root, role));
+    const manifestPath = manifestFor(root);
+    const prior = JSON.parse(await readFile(manifestPath));
+    prior.pluginVersion = "0.0.9";
+    for (const name of roles) prior.agents[name].pluginVersion = "0.0.9";
+    const priorBytes = Buffer.from(`${JSON.stringify(prior, null, 2)}\n`);
+    await writeFile(manifestPath, priorBytes);
+
+    const altTemplates = path.join(root, "templates");
+    await mkdir(altTemplates, { recursive: true });
+    for (const name of roles) {
+      const bytes = await readFile(path.join(repositoryRoot, "agent-templates", `${name}.toml`));
+      const updated = name === role
+        ? Buffer.from(bytes.toString("utf8").replace("A minimal read-only routing probe", "An updated minimal read-only routing probe"))
+        : bytes;
+      await writeFile(path.join(altTemplates, `${name}.toml`), updated);
+    }
+    const { install: installWithRoot } = await import("../scripts/lib/agent-installer.mjs");
+    const result = await installWithRoot({ scope: "user", userHome: root, templateDirectory: altTemplates });
+    assert.equal(result.ok, true);
+    const backupRun = result.backupDirectory;
+    assert.ok(backupRun);
+    assert.deepEqual(await readFile(path.join(backupRun, `${role}.toml`)), oldRole);
+    assert.deepEqual(await readFile(path.join(backupRun, "sol-luna-loop.lock.json")), priorBytes);
+    assert.notDeepEqual(await readFile(targetFor(root, role)), oldRole);
+    const upgraded = JSON.parse(await readFile(manifestPath, "utf8"));
+    assert.equal(upgraded.pluginVersion, "0.1.0");
+    assert.equal(upgraded.agents[role].pluginVersion, "0.1.0");
+  });
+});
+
+test("malformed or inconsistent manifest plugin versions are refused", async () => {
+  await withRoots(async (root) => {
+    assert.equal((await install(root, "--json")).code, 0);
+    const manifestPath = manifestFor(root);
+    const original = await readFile(manifestPath);
+    const malformed = JSON.parse(original);
+    malformed.pluginVersion = 0.0;
+    await writeFile(manifestPath, `${JSON.stringify(malformed, null, 2)}\n`);
+    const malformedResult = await install(root, "--json");
+    assert.equal(malformedResult.code, 2);
+    assert.match(JSON.parse(malformedResult.stdout).error, /MANIFEST_INVALID/);
+    await writeFile(manifestPath, original);
+
+    const inconsistent = JSON.parse(original);
+    inconsistent.pluginVersion = "0.0.9";
+    inconsistent.agents[roles[0]].pluginVersion = "0.0.8";
+    for (const role of roles.slice(1)) inconsistent.agents[role].pluginVersion = "0.0.9";
+    await writeFile(manifestPath, `${JSON.stringify(inconsistent, null, 2)}\n`);
+    const inconsistentResult = await install(root, "--json");
+    assert.equal(inconsistentResult.code, 2);
+    assert.match(JSON.parse(inconsistentResult.stdout).error, /MANIFEST_INVALID/);
+  });
+});
+
+test("uninstall refuses an agents junction before touching its target", async () => {
+  await withRoots(async (root) => {
+    const targetHome = path.join(root, "target-home");
+    assert.equal((await install(targetHome, "--json")).code, 0);
+    const junctionHome = path.join(root, "junction-home");
+    await mkdir(path.join(junctionHome, ".codex"), { recursive: true });
+    const junctionPath = path.join(junctionHome, ".codex", "agents");
+    await symlink(path.join(targetHome, ".codex", "agents"), junctionPath, "junction");
+    const result = await runCli(["uninstall", "--scope", "user", "--user-home", junctionHome, "--json"]);
+    assert.equal(result.code, 2);
+    assert.match(JSON.parse(result.stdout).error, /PATH_UNSAFE/);
+    assert.equal(await exists(path.join(targetHome, ".codex", "agents", "sll_luna_probe.toml")), true);
+    assert.equal(await exists(path.join(targetHome, ".codex", "agents", "sol-luna-loop.lock.json")), true);
+  });
+});
+
+test("lock release refuses a replacement token and preserves the replacement lock", async () => {
+  await withRoots(async (root) => {
+    const agents = path.join(root, ".codex", "agents");
+    await mkdir(agents, { recursive: true });
+    const lockPath = path.join(agents, ".sol-luna-loop.lock");
+    const lock = await acquireExclusiveLock(lockPath);
+    const replacement = { pid: 99999, startedAt: new Date().toISOString(), token: "replacement-owner-token" };
+    await writeFile(lockPath, `${JSON.stringify(replacement)}\n`);
+    await assert.rejects(() => lock.release(), (error) => error?.code === "LOCK_LOST");
+    assert.equal(JSON.parse(await readFile(lockPath, "utf8")).token, replacement.token);
+  });
+});
+
+test("failure after manifest publication restores old roles and manifest", async () => {
+  await withRoots(async (root) => {
+    assert.equal((await install(root, "--json")).code, 0);
+    const role = roles[0];
+    const oldRole = await readFile(targetFor(root, role));
+    const manifestPath = manifestFor(root);
+    const oldManifest = await readFile(manifestPath);
+    const altTemplates = path.join(root, "fault-templates");
+    await mkdir(altTemplates, { recursive: true });
+    for (const name of roles) {
+      const bytes = await readFile(path.join(repositoryRoot, "agent-templates", `${name}.toml`));
+      const updated = name === role
+        ? Buffer.from(bytes.toString("utf8").replace("A minimal read-only routing probe", "A fault-injection read-only routing probe"))
+        : bytes;
+      await writeFile(path.join(altTemplates, `${name}.toml`), updated);
+    }
+    const { install: installWithRoot } = await import("../scripts/lib/agent-installer.mjs");
+    await assert.rejects(
+      () => installWithRoot({ scope: "user", userHome: root, templateDirectory: altTemplates, faultAfterManifestPublication: true }),
+      (error) => error?.code === "INJECTED_FAILURE",
+    );
+    assert.deepEqual(await readFile(targetFor(root, role)), oldRole);
+    assert.deepEqual(await readFile(manifestPath), oldManifest);
+    const leftovers = (await readdir(agentsDir(root))).filter((entry) => entry.includes(".tmp") || entry.includes(".old"));
+    assert.deepEqual(leftovers, []);
   });
 });

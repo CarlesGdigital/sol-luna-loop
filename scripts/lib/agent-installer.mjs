@@ -232,6 +232,27 @@ async function ensureSafeDirectory(directory) {
   }
 }
 
+async function assertSafeExistingDirectory(directory) {
+  const target = path.resolve(directory);
+  const parsed = path.parse(target);
+  const relative = path.relative(parsed.root, target);
+  let current = parsed.root;
+  for (const segment of relative.split(path.sep).filter(Boolean)) {
+    current = path.join(current, segment);
+    let stats;
+    try {
+      stats = await lstat(current);
+    } catch (error) {
+      if (error?.code === "ENOENT") return false;
+      throw error;
+    }
+    if (stats.isSymbolicLink() || !stats.isDirectory()) {
+      throw installerError("PATH_UNSAFE", `refusing symlink or non-directory path component: ${current}`);
+    }
+  }
+  return true;
+}
+
 async function inspectTarget(name, target, expectedBytes) {
   let stats;
   try {
@@ -435,8 +456,8 @@ function makeBackupRun(paths) {
   return path.join(paths.backups, `${stamp}-${randomUUID()}`);
 }
 
-async function createBackup(runDirectory, name, bytes, expectedHash) {
-  const backupPath = path.join(runDirectory, `${name}.toml`);
+async function createBackup(runDirectory, fileName, bytes, expectedHash) {
+  const backupPath = path.join(runDirectory, fileName);
   await writeFlushed(backupPath, bytes);
   const verified = await readFile(backupPath);
   const actual = sha256(verified);
@@ -444,13 +465,27 @@ async function createBackup(runDirectory, name, bytes, expectedHash) {
   return backupPath;
 }
 
+async function inspectRegularFileHash(filePath) {
+  let stats;
+  try {
+    stats = await lstat(filePath);
+  } catch (error) {
+    if (error?.code === "ENOENT") return { exists: false, type: "missing", sha256: null, bytes: null };
+    throw error;
+  }
+  if (stats.isSymbolicLink()) return { exists: true, type: "symlink", sha256: null, bytes: null };
+  if (!stats.isFile()) return { exists: true, type: "non-file", sha256: null, bytes: null };
+  const bytes = await readFile(filePath);
+  return { exists: true, type: "file", sha256: sha256(bytes), bytes };
+}
+
 async function rollbackChanges(changes) {
   for (const change of [...changes].reverse()) {
     try {
+      const info = await inspectRegularFileHash(change.target);
       if (change.kind === "created") {
-        const info = await inspectTarget(change.name, change.target, Buffer.alloc(0));
-        if (info.exists && info.type === "file" && info.actualSha256 === change.newHash) await unlink(change.target);
-      } else if (change.kind === "replaced") {
+        if (info.exists && info.type === "file" && info.sha256 === change.newHash) await unlink(change.target);
+      } else if (change.kind === "replaced" && info.exists && info.type === "file" && info.sha256 === change.newHash) {
         await replaceOwnedFile(change.target, change.oldBytes);
       }
     } catch {
@@ -470,6 +505,7 @@ export async function install({
   projectRoot = undefined,
   dryRun = false,
   templateDirectory = TEMPLATE_DIRECTORY,
+  faultAfterManifestPublication = false,
 } = {}) {
   const paths = resolveScope({ scope, userHome, projectRoot });
   const templates = await loadTemplates(templateDirectory);
@@ -478,13 +514,16 @@ export async function install({
     const state = await inspectState(paths, templates);
     if (state.manifestInfo.error) throw state.manifestInfo.error;
     const actionable = state.agents.some((agent) => ["missing", "missing-managed", "managed-update"].includes(agent.status));
+    const manifestNeedsUpgrade = Boolean(
+      state.manifestInfo.valid && state.manifestInfo.manifest.pluginVersion !== PLUGIN_VERSION,
+    );
     const conflicts = state.conflicts;
     return {
       ...base,
       ok: conflicts.length === 0,
       changed: false,
-      wouldChange: conflicts.length === 0 && actionable,
-      idempotent: conflicts.length === 0 && !actionable,
+      wouldChange: conflicts.length === 0 && (actionable || manifestNeedsUpgrade),
+      idempotent: conflicts.length === 0 && !actionable && !manifestNeedsUpgrade,
       agents: state.agents,
       conflicts,
       manifest: publicManifestInfo(state.manifestInfo),
@@ -509,7 +548,11 @@ export async function install({
       };
     }
     const actionable = state.agents.filter((agent) => ["missing", "missing-managed", "managed-update"].includes(agent.status));
-    if (!actionable.length && state.manifestInfo.valid) {
+    const manifestNeedsUpgrade = Boolean(
+      state.manifestInfo.valid && state.manifestInfo.manifest.pluginVersion !== PLUGIN_VERSION,
+    );
+    const manifestNeedsWrite = Boolean(actionable.length || !state.manifestInfo.valid || manifestNeedsUpgrade);
+    if (!manifestNeedsWrite && state.manifestInfo.valid) {
       return {
         ...base,
         ok: true,
@@ -522,16 +565,27 @@ export async function install({
     }
     const changes = [];
     const backupCandidates = actionable.filter((agent) => agent.status === "managed-update");
-    const backupRun = backupCandidates.length ? makeBackupRun(paths) : null;
+    const backupRun = backupCandidates.length || (state.manifestInfo.exists && manifestNeedsWrite) ? makeBackupRun(paths) : null;
     const backupPaths = new Map();
     try {
       if (backupRun) await ensureSafeDirectory(backupRun);
+      let oldManifestBytes = null;
+      if (backupRun && state.manifestInfo.exists && manifestNeedsWrite) {
+        oldManifestBytes = await readFile(paths.manifest);
+        const manifestBackupPath = await createBackup(
+          backupRun,
+          MANIFEST_FILE_NAME,
+          oldManifestBytes,
+          sha256(oldManifestBytes),
+        );
+        backupPaths.set(MANIFEST_FILE_NAME, manifestBackupPath);
+      }
       for (const agent of actionable) {
         const template = templates.find((entry) => entry.name === agent.name);
         const oldBytes = agent.exists && agent.type === "file" ? await readFile(agent.target) : null;
         if (agent.status === "managed-update") {
           const oldEntry = manifestEntry(state.manifestInfo.manifest, agent.name);
-          const backupPath = await createBackup(backupRun, agent.name, oldBytes, oldEntry.sha256);
+          const backupPath = await createBackup(backupRun, `${agent.name}.toml`, oldBytes, oldEntry.sha256);
           backupPaths.set(agent.name, backupPath);
           await replaceOwnedFile(agent.target, template.bytes);
           changes.push({ kind: "replaced", name: agent.name, target: agent.target, oldBytes, newHash: template.sha256, backupPath });
@@ -545,7 +599,20 @@ export async function install({
       const manifestBytes = Buffer.from(serializeManifest(manifest), "utf8");
       if (state.manifestInfo.exists) await replaceOwnedFile(paths.manifest, manifestBytes);
       else await publishNewFile(paths.manifest, manifestBytes);
+      changes.push({
+        kind: state.manifestInfo.exists ? "replaced" : "created",
+        target: paths.manifest,
+        oldBytes: oldManifestBytes,
+        newHash: sha256(manifestBytes),
+      });
+      if (faultAfterManifestPublication) {
+        throw installerError("INJECTED_FAILURE", "fault injected after manifest publication");
+      }
       const after = await inspectState(paths, templates);
+      const finalValid = after.manifestInfo.valid &&
+        after.manifestInfo.manifest.pluginVersion === PLUGIN_VERSION &&
+        after.agents.every((agent) => agent.status === "exact" && agent.exact && agent.owned);
+      if (!finalValid) throw installerError("POST_PUBLISH_VERIFY_FAILED", "post-publication verification did not prove exact owned agents");
       return {
         ...base,
         ok: true,
@@ -648,35 +715,53 @@ export async function uninstall({
   const paths = resolveScope({ scope, userHome, projectRoot });
   const templates = await loadTemplates(templateDirectory);
   const base = baseResult("uninstall", paths, templates, dryRun);
+  await assertSafeExistingDirectory(paths.agentsDir);
   const state = await inspectState(paths, templates);
   if (!state.manifestInfo.exists) {
     return { ...base, ok: true, changed: false, removed: [], conflicts: [], manifest: publicManifestInfo(state.manifestInfo), agents: state.agents };
   }
   if (!state.manifestInfo.valid) throw state.manifestInfo.error;
-  const conflicts = state.conflicts.filter((entry) => entry.reason === "tampered-managed-file" || entry.reason === "foreign-type" || entry.reason === "unowned-file");
-  const removable = state.agents.filter((agent) => agent.exists && agent.type === "file" && agent.owned);
-  const missingOwned = state.agents.filter((agent) => !agent.exists && manifestEntry(state.manifestInfo.manifest, agent.name));
-  const wouldRemove = [...removable.map((agent) => agent.name), ...missingOwned.map((agent) => agent.name)];
+
+  const planFor = (currentState) => {
+    const conflicts = currentState.conflicts.filter((entry) => entry.reason === "tampered-managed-file" || entry.reason === "foreign-type" || entry.reason === "unowned-file");
+    const removable = currentState.agents.filter((agent) => agent.exists && agent.type === "file" && agent.owned);
+    const missingOwned = currentState.agents.filter((agent) => !agent.exists && manifestEntry(currentState.manifestInfo.manifest, agent.name));
+    const wouldRemove = [...removable.map((agent) => agent.name), ...missingOwned.map((agent) => agent.name)];
+    return { conflicts, removable, wouldRemove };
+  };
+  const initialPlan = planFor(state);
   if (dryRun) {
-    return { ...base, ok: conflicts.length === 0, changed: false, wouldChange: conflicts.length === 0 && Boolean(wouldRemove.length || state.manifestInfo.exists), wouldRemove, removed: [], conflicts, manifest: publicManifestInfo(state.manifestInfo), agents: state.agents, ...(conflicts.length ? { error: "uninstall conflicts preserve managed files" } : {}) };
+    return { ...base, ok: initialPlan.conflicts.length === 0, changed: false, wouldChange: initialPlan.conflicts.length === 0 && Boolean(initialPlan.wouldRemove.length || state.manifestInfo.exists), wouldRemove: initialPlan.wouldRemove, removed: [], conflicts: initialPlan.conflicts, manifest: publicManifestInfo(state.manifestInfo), agents: state.agents, ...(initialPlan.conflicts.length ? { error: "uninstall conflicts preserve managed files" } : {}) };
   }
+  // Recheck immediately before acquiring the lock so a junction cannot become
+  // the lock parent between the initial read-only inspection and mutation.
+  await assertSafeExistingDirectory(paths.agentsDir);
   const lock = await acquireExclusiveLock(paths.lock);
   try {
-    for (const agent of removable) await unlink(agent.target);
-    if (conflicts.length) {
+    // The lock protects the final ownership decision; never unlink based on
+    // the state observed before acquiring it.
+    await assertSafeExistingDirectory(paths.agentsDir);
+    const lockedState = await inspectState(paths, templates);
+    if (!lockedState.manifestInfo.exists) {
+      return { ...base, ok: true, changed: false, removed: [], conflicts: [], manifest: publicManifestInfo(lockedState.manifestInfo), agents: lockedState.agents };
+    }
+    if (!lockedState.manifestInfo.valid) throw lockedState.manifestInfo.error;
+    const lockedPlan = planFor(lockedState);
+    for (const agent of lockedPlan.removable) await unlink(agent.target);
+    if (lockedPlan.conflicts.length) {
       return {
         ...base,
         ok: false,
-        changed: removable.length > 0,
-        removed: removable.map((agent) => agent.name),
-        conflicts,
-        manifest: publicManifestInfo(state.manifestInfo),
-        agents: state.agents,
+        changed: lockedPlan.removable.length > 0,
+        removed: lockedPlan.removable.map((agent) => agent.name),
+        conflicts: lockedPlan.conflicts,
+        manifest: publicManifestInfo(lockedState.manifestInfo),
+        agents: lockedState.agents,
         error: "uninstall conflicts preserve managed files",
       };
     }
     await unlink(paths.manifest).catch((error) => { if (error?.code !== "ENOENT") throw error; });
-    return { ...base, ok: true, changed: true, removed: wouldRemove, conflicts: [], manifest: { exists: false, valid: false, schemaVersion: null, pluginVersion: null }, agents: [], };
+    return { ...base, ok: true, changed: true, removed: lockedPlan.wouldRemove, conflicts: [], manifest: { exists: false, valid: false, schemaVersion: null, pluginVersion: null }, agents: [], };
   } finally {
     await lock.release();
   }
