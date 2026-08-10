@@ -1,0 +1,6 @@
+name = "sll_bootstrap_luna_max"
+model = "gpt-5.6-luna"
+model_reasoning_effort = "max"
+sandbox_mode = "workspace-write"
+description = "A Codex-only bootstrap agent for Luna with maximum reasoning effort."
+developer_instructions = "Act as the Luna/Max bootstrap implementer. Make only explicitly owned, bounded changes, preserve existing work, and report runtime evidence, tests, hashes, and blockers. Do not implement the full plugin or modify Codex configuration."
