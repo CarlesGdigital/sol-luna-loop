@@ -1,62 +1,81 @@
-# Luna/Max Codex agent bootstrap
+# Definitive Luna/Max agent bootstrap
 
-This repository contains the smallest Codex-only bootstrap for the native agent
-`sll_bootstrap_luna_max`. It does not scaffold a plugin, edit `config.toml`, or
-touch any Cursor, Kiro, Copilot, or ChatGPT compatibility files.
+This repository contains a dependency-free Node.js 20+ installer for the eight
+definitive `sol-luna-loop` Luna/Max roles. The accepted
+`sll_bootstrap_luna_max` template remains in `agent-templates/`, but it is a
+bootstrap asset and is not managed by the eight-role manifest.
 
-## Requirements
+The installer never edits `config.toml`, never contacts a model API, and never
+overwrites or removes an agent that is foreign to its manifest. It is safe to
+exercise with temporary homes and project roots before the primary session
+performs any real Codex-scope installation.
 
-- Node.js 20 or newer.
-- A writable user home directory.
+## Commands
 
-The exact template is tracked at
-`agent-templates/sll_bootstrap_luna_max.toml`. The installer always reads that
-file and computes its SHA-256 before it does anything to the destination.
-
-## Install and check
-
-Install to the current user's Codex scope:
+User scope defaults to the current OS home and publishes to
+`<user-home>/.codex/agents`:
 
 ```text
 node scripts/bootstrap-agents.mjs install
+node scripts/bootstrap-agents.mjs check --scope user --user-home C:\temp\codex-home --json
+node scripts/bootstrap-agents.mjs doctor --scope user --user-home C:\temp\codex-home --json
+node scripts/bootstrap-agents.mjs uninstall --scope user --user-home C:\temp\codex-home --json
 ```
 
-The default destination is
-`<os.homedir()>/.codex/agents/sll_bootstrap_luna_max.toml`. To inspect or test a
-different home, pass `--user-home <path>`:
+Project scope publishes to `<project-root>/.codex/agents`:
 
 ```text
-node scripts/bootstrap-agents.mjs install --user-home C:\temp\codex-home
-node scripts/bootstrap-agents.mjs check --user-home C:\temp\codex-home --json
+node scripts/bootstrap-agents.mjs install --scope project --project-root C:\temp\my-project
+node scripts/bootstrap-agents.mjs check --scope project --project-root C:\temp\my-project --json
+node scripts/bootstrap-agents.mjs doctor --scope project --project-root C:\temp\my-project --json
+node scripts/bootstrap-agents.mjs uninstall --scope project --project-root C:\temp\my-project --json
 ```
 
-`install` creates the parent directories, publishes the flushed file
-atomically, and is idempotent when the destination already has the exact
-template bytes. A destination containing any other file (including a symlink)
-is a closed conflict: the command exits nonzero and leaves it unchanged. The
-installer never modifies `config.toml`.
+`--dry-run` performs discovery and reports what would change without creating
+directories, lock files, manifests, backups, or role files. `--json` emits one
+machine-readable object on stdout and never includes template bodies.
 
-Use `--dry-run` to see the planned install without creating directories or
-writing a file:
+Supported actions are `install`, `check`, `doctor`, and `uninstall`. Scope paths
+are explicit: `--user-home` is valid only for user scope and `--project-root`
+only for project scope. Empty, contradictory, duplicate, or unknown arguments
+fail closed.
 
-```text
-node scripts/bootstrap-agents.mjs install --user-home C:\temp\codex-home --dry-run --json
-```
+## Safety and recovery
 
-`check` reports existence, exact-byte equality, SHA-256 equality, and every
-required schema literal. It exits nonzero for a missing, tampered, or otherwise
-non-matching file. `--json` emits one object only, with hashes and status but
-never the template body.
+The managed manifest is
+`<agents-dir>/sol-luna-loop.lock.json` (schema version `1`). It records the
+plugin version, scope, generation time, and the expected model, reasoning,
+sandbox, SHA-256, and repository-relative template origin for every role.
+
+Mutating actions serialize through the exclusive
+`<agents-dir>/.sol-luna-loop.lock`. A live lock is an error; it is never
+bypassed. Every replacement of an exact manifest-owned file is backed up under
+`<agents-dir>/.sol-luna-loop-backups/<timestamp>/` and the backup hash is
+verified before publication. Files are written to same-directory temporary
+files, flushed, and then published atomically. Temporary files are cleaned up.
+
+An absent-manifest file is foreign even if its bytes happen to match a current
+template. A manifest-owned file whose bytes no longer match its recorded hash
+is a tampered conflict. Both cases are preserved. Uninstall removes only exact
+manifest-owned regular files; foreign files, symlinks, directories, and local
+edits remain in place and produce a nonzero conflict result.
+
+`check` verifies exact bytes, hashes, pins, and ownership without mutation.
+`doctor` is read-only and reports stable action, scope, platform, Node gate,
+paths, lock state, manifest validity, per-agent status, and deterministic issue
+codes. Runtime discovery in Codex is a separate gate and may require a fresh
+Codex task after installation.
 
 ## Verification
 
-Run the dependency-free test suite from the repository root:
+From the repository root:
 
 ```text
-node --test tests/bootstrap-agents.test.mjs
+npm test
 git diff --check
+node scripts/bootstrap-agents.mjs install --dry-run --json
 ```
 
-The tests use temporary homes and cover install, check, idempotent reinstall,
-dry-run safety, conflict refusal, tamper detection, JSON output, and the
-default literal pins.
+The test suite uses temporary user/project scopes only. The primary session
+must independently inspect the diff, rerun the suite, perform temporary
+lifecycle checks, and decide whether the real Codex user scope may be touched.

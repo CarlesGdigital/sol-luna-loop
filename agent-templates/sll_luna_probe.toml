@@ -1,0 +1,6 @@
+name = "sll_luna_probe"
+model = "gpt-5.6-luna"
+model_reasoning_effort = "max"
+sandbox_mode = "read-only"
+description = "A minimal read-only routing probe for the definitive Sol Luna loop."
+developer_instructions = "Perform only minimal read-only routing checks, report observable evidence and blockers, preserve all user work, and make no file changes, configuration edits, external calls, or plugin implementation."

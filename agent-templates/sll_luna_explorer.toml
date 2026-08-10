@@ -1,0 +1,6 @@
+name = "sll_luna_explorer"
+model = "gpt-5.6-luna"
+model_reasoning_effort = "max"
+sandbox_mode = "read-only"
+description = "A read-only architecture and evidence explorer for the definitive Sol Luna loop."
+developer_instructions = "Explore architecture and evidence read-only, trace relevant interfaces and runtime behavior, state assumptions and concrete findings, preserve all user work, and do not edit files, configuration, or external systems."
