@@ -18,9 +18,8 @@ created under this gate.
 
 - Owner/repository: `CarlesGdigital/sol-luna-loop` (public).
 - Default branch: `main`.
-- Verified source commit: `8e73b19f33f727cf3d208927babf6aa364706662`.
-- GitHub CI runs `31462243262` (`main`) and `31462241593` (`feat/sol-luna-loop`):
-  Ubuntu, macOS, and Windows all passed.
+- Verified source commit: `413e02df2b250ea2c583e0d020412e5fb642bc51`.
+- GitHub CI run `31463052840` (`main`) passed on Ubuntu, macOS, and Windows.
 - No `v1.0.0` tag or GitHub Release exists; no `SHA256SUMS` is published.
 - Official Python plugin validator: passed.
 - Local Node validator: passed.
