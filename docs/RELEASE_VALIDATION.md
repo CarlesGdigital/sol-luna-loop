@@ -9,15 +9,15 @@ runtime proof.
 `RELEASE_CANDIDATE_VALIDATION`
 
 The public repository, marketplace install, eight-role routing, staged sandbox
-verification, and model-backed failure/replan/fix loop have passed. The final
-candidate still requires a GitHub CI run, upgrade of the installed plugin to the
-release commit, trust of the changed hook hash, live quarantine verification,
-release artifacts, the annotated `v1.0.0` tag, and the GitHub Release.
+verification, model-backed failure/replan/fix loop, release-candidate CI, and
+the upgraded live hook quarantine have passed. The final candidate still
+requires clean-room release artifacts, independent checksums, the final ledger
+CI, the annotated `v1.0.0` tag, and the GitHub Release.
 
 ## Deterministic package evidence
 
 - Package and plugin version: `1.0.0`.
-- Full suite: 57/57 passed; zero failures, skips, or todos.
+- Full suite: 58/58 passed; zero failures, skips, or todos.
 - Local plugin validator and `git diff --check`: passed.
 - User installer `check` and `doctor`: `ok:true`, manifest `1.0.0`, eight exact
   owned role hashes, inactive lock, zero issues.
@@ -27,14 +27,14 @@ release artifacts, the annotated `v1.0.0` tag, and the GitHub Release.
 ## GitHub and marketplace evidence
 
 - Public repository: `CarlesGdigital/sol-luna-loop`; default branch `main`.
-- Earlier candidate CI passed on Ubuntu, macOS, and Windows. The release commit
-  must repeat this gate before tagging.
+- Commit `e89d7359daad885e28b34342def40c654ca5b0d6` passed GitHub Actions run
+  `31514358310` on Ubuntu, macOS, and Windows.
 - The marketplace source was added from the public GitHub repository and
   `sol-luna-loop@sol-luna-loop` version `1.0.0` was installed and enabled in the
   real Codex plugin cache.
-- Codex listed four plugin hooks. The previously installed definitions were
-  explicitly trusted through the official app-server config API; the changed
-  release hook must be reviewed and trusted again after upgrade.
+- Codex listed four installed plugin hooks. After the marketplace upgrade, all
+  four definitions were explicitly trusted through the official app-server
+  config API. The Windows commands resolved to absolute plugin-cache paths.
 
 ## Runtime routing evidence
 
@@ -74,7 +74,14 @@ tokens before emitting context. It rejects bypass or unknown permission modes
 and malformed lifecycle JSON exits 2; reasoning effort is not present in that
 event. Its global matcher intentionally quarantines unrelated child roles while
 the plugin is enabled, an availability tradeoff documented for users.
-The upgraded installed hook still needs one live quarantine run before tagging.
+The first Windows live run exposed a real packaging defect: `%PLUGIN_ROOT%`
+remained literal and `SubagentStart` exited 1. Regression coverage was added,
+the commands were changed to Codex-expanded `${PLUGIN_ROOT}`, and CI repeated.
+In fresh app-server parent session `019ff1bb-47e5-7680-97a2-54e2d77a375f`,
+worker child `019ff1bb-6a7b-72b2-8cd4-f343ec7cf46d` then produced an observed
+`hook/completed` status of `completed`, received the quarantine context, called
+no tools, and returned exactly `ROUTING_DENIED worker`. The parent `Stop` hook
+also completed successfully.
 
 ## Model-backed loop E2E
 
@@ -98,11 +105,12 @@ outside both repositories.
 
 Before changing this status to `VERIFIED_READY`, the primary session must:
 
-1. push the candidate and wait for all GitHub CI jobs;
-2. upgrade the real installed plugin, review/trust the new hook hash, and prove
-   the live `SubagentStart` quarantine;
-3. create and extract the release archives, rerun tests/validator/lifecycle, and
-   write `SHA256SUMS` from independently computed hashes;
-4. rerun user `check`/`doctor`, secret/local-path scans, and final diff review;
-5. push the final ledger commit, wait for CI again, then create annotated tag
-   `v1.0.0` and the GitHub Release with all assets.
+1. [x] push the candidate and wait for all GitHub CI jobs;
+2. [x] upgrade the real installed plugin, review/trust the new hook hash, and
+   prove the live `SubagentStart` quarantine;
+3. [ ] create and extract the release archives, rerun tests/validator/lifecycle,
+   and write `SHA256SUMS` from independently computed hashes;
+4. [ ] rerun user `check`/`doctor`, secret/local-path scans, and final diff
+   review;
+5. [ ] push the final ledger commit, wait for CI again, then create annotated
+   tag `v1.0.0` and the GitHub Release with all assets.
