@@ -14,7 +14,7 @@
     "node": ">=20"
   },
   "scripts": {
-    "test": "node --test tests/*.test.mjs",
+    "test": "node scripts/run-tests.mjs",
     "validate:plugin": "node scripts/validate-plugin.mjs",
     "pack:check": "npm pack --dry-run"
   }
