@@ -6,17 +6,17 @@ runtime proof.
 
 ## Status
 
-`RELEASE_CANDIDATE_VALIDATION`
+`VERIFIED_READY`
 
 The public repository, eight-role routing, staged sandbox verification,
 model-backed failure/replan/fix loop, and the `v1.0.0` release passed their
 recorded gates. A post-release positive smoke then exposed that Codex reports
 approval policy `never` to `SubagentStart` as `bypassPermissions`; `v1.0.0`
-incorrectly quarantined that valid event. The corrected `v1.0.1` candidate
+incorrectly quarantined that valid event. The corrected `v1.0.1` release
 accepts this documented mapping while retaining quarantine for unknown, null,
-or malformed permission modes. Candidate CI, marketplace upgrade, live positive
-and negative hook smokes, and clean-room artifact tests have now passed. The
-annotated `v1.0.1` tag and GitHub Release remain the final publication gate.
+or malformed permission modes. CI, immutable tag installation, live positive
+and negative hook smokes, clean-room artifact tests, independent downloads, and
+the public GitHub Release have all passed.
 
 ## Deterministic package evidence
 
@@ -25,13 +25,13 @@ annotated `v1.0.1` tag and GitHub Release remain the final publication gate.
 - Local plugin validator and `git diff --check`: passed.
 - User installer `check` and `doctor`: `ok:true`, manifest `1.0.1`, eight exact
   owned role hashes, inactive lock, zero issues.
-- Candidate TGZ and ZIP both passed 60/60 tests, plugin validation, lifecycle
+- Published TGZ and ZIP both passed 60/60 tests, plugin validation, lifecycle
   hook execution from paths containing spaces, and user/project
-  install/check/doctor/uninstall cycles. Candidate SHA-256 values were
-  `d692da30a715adbc12eb8d05573cac8a198846b8ad7d46a054b00f3b37034d4a`
+  install/check/doctor/uninstall cycles. Release SHA-256 values are
+  `6fe1a0d693add7db492d527d1271c505664375b66784f02afbe83f8e4a9c3af1`
   (TGZ) and
-  `953c19c0ba66cb3e740c257e1d090d1ae4a4a1475dd446721a4c7cbadd2375f8`
-  (ZIP). Publication artifacts are regenerated from the final ledger commit.
+  `d915b2f58e70cf4f868d0f282b58bf7c2710bb299ca383612658321406fb76c8`
+  (ZIP). Fresh downloads from GitHub matched the attached `SHA256SUMS`.
 - The repository is dependency-free at runtime; source CI uses the committed
   npm lockfile and audits production dependencies.
 
@@ -41,11 +41,18 @@ annotated `v1.0.1` tag and GitHub Release remain the final publication gate.
 - Corrective commit `52b44794f1f1e392b62e6ba64569650033252388` passed
   GitHub Actions runs `31515731170` (`main`) and `31515731177`
   (`feat/sol-luna-loop`) on Ubuntu, macOS, and Windows.
+- Release commit `9e808b86ee7a28241ec6133c23bb2d93e0d1bbec` passed
+  GitHub Actions runs `31516238319` (`main`) and `31516237931`
+  (`feat/sol-luna-loop`) on Ubuntu, macOS, and Windows.
 - The marketplace source was added from the public GitHub repository and
   `sol-luna-loop@sol-luna-loop` version `1.0.0` was installed and enabled in the
-  real Codex plugin cache. That immutable release is superseded by the pending
-  `v1.0.1` corrective release. The real marketplace was then upgraded from
-  public `main` and Codex reported version `1.0.1` installed and enabled.
+  real Codex plugin cache. That immutable release is superseded by `v1.0.1`.
+  The real marketplace is now pinned to tag `v1.0.1` at release commit
+  `9e808b86ee7a28241ec6133c23bb2d93e0d1bbec`, and Codex reports version `1.0.1`
+  installed and enabled.
+- GitHub Release `v1.0.1` is public, non-draft, non-prerelease, and latest at
+  `https://github.com/CarlesGdigital/sol-luna-loop/releases/tag/v1.0.1`, with
+  TGZ, ZIP, and `SHA256SUMS` assets.
 - Codex listed four installed plugin hooks. After the marketplace upgrade, all
   four definitions were explicitly trusted through the official app-server
   config API. The Windows commands resolved to absolute plugin-cache paths.
@@ -109,6 +116,15 @@ context recorded `gpt-5.6-luna`, effort `max`, managed `read-only`, approval
 lifecycle hook injected the quarantine instruction, the child called no tools,
 and returned exactly `ROUTING_DENIED worker`.
 
+After pinning the installed marketplace to the published tag, parent session
+`019ff1d0-aaab-7381-bc2d-f5143a7d3368` spawned child
+`019ff1d0-c84a-7030-8cf6-1812e8951709` as `sll_luna_probe`; the persisted turn
+context again recorded Luna/Max, managed `read-only`, approval `never`, and the
+child returned exactly `RELEASE_ROLE_OK`. Parent session
+`019ff1d1-40a1-7860-94fe-c6e7585b8515` then spawned a `worker`; the installed
+tag's lifecycle hook quarantined it, it made zero tool calls, and returned
+exactly `ROUTING_DENIED worker`.
+
 The first packed-artifact run in a path containing spaces exposed a second
 real defect: URL-encoded module paths prevented both hook entrypoints from
 recognizing direct execution. The entrypoint check now compares normalized
@@ -135,7 +151,7 @@ outside both repositories.
 
 ## Publication gate
 
-Before changing this status to `VERIFIED_READY`, the primary session must:
+The primary session completed every release gate:
 
 1. [x] push the `v1.0.1` candidate and wait for all GitHub CI jobs;
 2. [x] upgrade the real installed plugin, review/trust the hooks, and prove
@@ -144,5 +160,5 @@ Before changing this status to `VERIFIED_READY`, the primary session must:
    and write `SHA256SUMS` from independently computed hashes;
 4. [x] rerun user `check`/`doctor`, secret/local-path scans, and final diff
    review;
-5. [ ] push the final ledger commit, wait for CI again, then create annotated
+5. [x] push the final ledger commit, wait for CI again, then create annotated
    tag `v1.0.1` and the GitHub Release with all assets.
