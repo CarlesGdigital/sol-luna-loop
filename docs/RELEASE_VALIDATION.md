@@ -14,9 +14,9 @@ recorded gates. A post-release positive smoke then exposed that Codex reports
 approval policy `never` to `SubagentStart` as `bypassPermissions`; `v1.0.0`
 incorrectly quarantined that valid event. The corrected `v1.0.1` candidate
 accepts this documented mapping while retaining quarantine for unknown, null,
-or malformed permission modes. It still requires candidate CI, marketplace
-upgrade, live positive and negative hook smokes, clean-room artifacts,
-independent checksums, the annotated `v1.0.1` tag, and the GitHub Release.
+or malformed permission modes. Candidate CI, marketplace upgrade, live positive
+and negative hook smokes, and clean-room artifact tests have now passed. The
+annotated `v1.0.1` tag and GitHub Release remain the final publication gate.
 
 ## Deterministic package evidence
 
@@ -25,18 +25,27 @@ independent checksums, the annotated `v1.0.1` tag, and the GitHub Release.
 - Local plugin validator and `git diff --check`: passed.
 - User installer `check` and `doctor`: `ok:true`, manifest `1.0.1`, eight exact
   owned role hashes, inactive lock, zero issues.
+- Candidate TGZ and ZIP both passed 60/60 tests, plugin validation, lifecycle
+  hook execution from paths containing spaces, and user/project
+  install/check/doctor/uninstall cycles. Candidate SHA-256 values were
+  `d692da30a715adbc12eb8d05573cac8a198846b8ad7d46a054b00f3b37034d4a`
+  (TGZ) and
+  `953c19c0ba66cb3e740c257e1d090d1ae4a4a1475dd446721a4c7cbadd2375f8`
+  (ZIP). Publication artifacts are regenerated from the final ledger commit.
 - The repository is dependency-free at runtime; source CI uses the committed
   npm lockfile and audits production dependencies.
 
 ## GitHub and marketplace evidence
 
 - Public repository: `CarlesGdigital/sol-luna-loop`; default branch `main`.
-- Commit `e89d7359daad885e28b34342def40c654ca5b0d6` passed GitHub Actions run
-  `31514358310` on Ubuntu, macOS, and Windows.
+- Corrective commit `52b44794f1f1e392b62e6ba64569650033252388` passed
+  GitHub Actions runs `31515731170` (`main`) and `31515731177`
+  (`feat/sol-luna-loop`) on Ubuntu, macOS, and Windows.
 - The marketplace source was added from the public GitHub repository and
   `sol-luna-loop@sol-luna-loop` version `1.0.0` was installed and enabled in the
   real Codex plugin cache. That immutable release is superseded by the pending
-  `v1.0.1` corrective release.
+  `v1.0.1` corrective release. The real marketplace was then upgraded from
+  public `main` and Codex reported version `1.0.1` installed and enabled.
 - Codex listed four installed plugin hooks. After the marketplace upgrade, all
   four definitions were explicitly trusted through the official app-server
   config API. The Windows commands resolved to absolute plugin-cache paths.
@@ -91,6 +100,15 @@ worker child `019ff1bb-6a7b-72b2-8cd4-f343ec7cf46d` then produced an observed
 no tools, and returned exactly `ROUTING_DENIED worker`. The parent `Stop` hook
 also completed successfully.
 
+The corrected `v1.0.1` candidate was exercised again under approval `never`.
+Parent session `019ff1ca-f571-7b62-9ca8-50778bcdf541` spawned real child
+`019ff1cb-18ab-7280-bb55-025c79d1046f` as `sll_luna_probe`; its persisted turn
+context recorded `gpt-5.6-luna`, effort `max`, managed `read-only`, approval
+`never`, and it returned exactly `ROLE_OK`. Parent session
+`019ff1cb-990d-7ef3-a650-c30e0b828ea7` then spawned a real `worker` child; the
+lifecycle hook injected the quarantine instruction, the child called no tools,
+and returned exactly `ROUTING_DENIED worker`.
+
 The first packed-artifact run in a path containing spaces exposed a second
 real defect: URL-encoded module paths prevented both hook entrypoints from
 recognizing direct execution. The entrypoint check now compares normalized
@@ -119,12 +137,12 @@ outside both repositories.
 
 Before changing this status to `VERIFIED_READY`, the primary session must:
 
-1. [ ] push the `v1.0.1` candidate and wait for all GitHub CI jobs;
-2. [ ] upgrade the real installed plugin, review/trust the hooks, and prove
+1. [x] push the `v1.0.1` candidate and wait for all GitHub CI jobs;
+2. [x] upgrade the real installed plugin, review/trust the hooks, and prove
    both a positive definitive-role start and the negative quarantine;
-3. [ ] create and extract the release archives, rerun tests/validator/lifecycle,
+3. [x] create and extract the release archives, rerun tests/validator/lifecycle,
    and write `SHA256SUMS` from independently computed hashes;
-4. [ ] rerun user `check`/`doctor`, secret/local-path scans, and final diff
+4. [x] rerun user `check`/`doctor`, secret/local-path scans, and final diff
    review;
 5. [ ] push the final ledger commit, wait for CI again, then create annotated
    tag `v1.0.1` and the GitHub Release with all assets.
