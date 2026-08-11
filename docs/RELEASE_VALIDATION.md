@@ -17,7 +17,7 @@ CI, the annotated `v1.0.0` tag, and the GitHub Release.
 ## Deterministic package evidence
 
 - Package and plugin version: `1.0.0`.
-- Full suite: 58/58 passed; zero failures, skips, or todos.
+- Full suite: 59/59 passed; zero failures, skips, or todos.
 - Local plugin validator and `git diff --check`: passed.
 - User installer `check` and `doctor`: `ok:true`, manifest `1.0.0`, eight exact
   owned role hashes, inactive lock, zero issues.
@@ -82,6 +82,12 @@ worker child `019ff1bb-6a7b-72b2-8cd4-f343ec7cf46d` then produced an observed
 `hook/completed` status of `completed`, received the quarantine context, called
 no tools, and returned exactly `ROUTING_DENIED worker`. The parent `Stop` hook
 also completed successfully.
+
+The first packed-artifact run in a path containing spaces exposed a second
+real defect: URL-encoded module paths prevented both hook entrypoints from
+recognizing direct execution. The entrypoint check now compares normalized
+filesystem paths via `fileURLToPath`; a dedicated copied-plugin regression in a
+space-containing path passes for both hook processes.
 
 ## Model-backed loop E2E
 

@@ -1,6 +1,8 @@
 #!/usr/bin/env node
 
 import { DEFINITIVE_AGENT_TYPES } from "./pre_tool_use.mjs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 
 const ALLOWED_PERMISSION_MODES = new Set(["default", "acceptEdits", "plan", "dontAsk"]);
 
@@ -61,7 +63,15 @@ async function readStdin() {
   return Buffer.concat(chunks).toString("utf8").trim();
 }
 
-if (process.argv[1] && new URL(import.meta.url).pathname.endsWith(process.argv[1].replaceAll("\\", "/"))) {
+const modulePath = path.resolve(fileURLToPath(import.meta.url));
+const invokedPath = process.argv[1] ? path.resolve(process.argv[1]) : null;
+const isMainModule = invokedPath != null && (
+  process.platform === "win32"
+    ? invokedPath.toLowerCase() === modulePath.toLowerCase()
+    : invokedPath === modulePath
+);
+
+if (isMainModule) {
   const raw = await readStdin();
   if (raw) {
     let event;

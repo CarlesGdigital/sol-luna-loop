@@ -1,5 +1,7 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
+import { copyFileSync, mkdirSync, mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import test from "node:test";
@@ -109,4 +111,31 @@ test("lifecycle process rejects malformed JSON with exit code 2", () => {
   assert.equal(result.status, 2);
   assert.match(result.stderr, /invalid JSON/i);
   assert.equal(result.stdout, "");
+});
+
+test("hook processes execute from a plugin path containing spaces", (t) => {
+  const temporaryRoot = mkdtempSync(path.join(tmpdir(), "sol luna hooks "));
+  t.after(() => rmSync(temporaryRoot, { recursive: true, force: true }));
+  const hooksDirectory = path.join(temporaryRoot, "plugin root", "hooks");
+  mkdirSync(hooksDirectory, { recursive: true });
+  for (const fileName of ["pre_tool_use.mjs", "lifecycle.mjs"]) {
+    copyFileSync(
+      path.join(repositoryRoot, "hooks", fileName),
+      path.join(hooksDirectory, fileName),
+    );
+  }
+
+  const preToolUse = spawnSync(process.execPath, [path.join(hooksDirectory, "pre_tool_use.mjs")], {
+    input: JSON.stringify({ tool_name: "spawn_agent", tool_input: { agent_type: "worker" } }),
+    encoding: "utf8",
+  });
+  assert.equal(preToolUse.status, 0);
+  assert.equal(JSON.parse(preToolUse.stdout).hookSpecificOutput.permissionDecision, "deny");
+
+  const lifecycle = spawnSync(process.execPath, [path.join(hooksDirectory, "lifecycle.mjs")], {
+    input: JSON.stringify({ hook_event_name: "SubagentStart", agent_type: "worker" }),
+    encoding: "utf8",
+  });
+  assert.equal(lifecycle.status, 0);
+  assert.match(JSON.parse(lifecycle.stdout).hookSpecificOutput.additionalContext, /ROUTING_DENIED worker/);
 });
