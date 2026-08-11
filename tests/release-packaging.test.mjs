@@ -54,3 +54,15 @@ test("SubagentStart wiring reaches prohibited roles for quarantine", () => {
   assert.equal(matcher.test("default"), true);
   assert.equal(matcher.test("explorer"), true);
 });
+
+test("Windows hook commands use the Codex-expanded plugin root", () => {
+  const hooks = readJson("hooks/hooks.json");
+  for (const groups of Object.values(hooks.hooks)) {
+    for (const group of groups) {
+      for (const hook of group.hooks) {
+        assert.match(hook.command_windows, /\$\{PLUGIN_ROOT\}/);
+        assert.doesNotMatch(hook.command_windows, /%PLUGIN_ROOT%/);
+      }
+    }
+  }
+});
