@@ -1,12 +1,21 @@
 {
   "name": "sol-luna-loop",
-  "version": "0.1.0",
-  "private": true,
+  "version": "1.0.0",
+  "private": false,
+  "description": "Codex-native Sol/High orchestration with Luna/Max specialist agents.",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/CarlesGdigital/sol-luna-loop.git"
+  },
+  "keywords": ["codex", "openai", "multi-agent", "orchestration", "plugin", "testing"],
   "type": "module",
   "engines": {
     "node": ">=20"
   },
   "scripts": {
-    "test": "node --test tests/*.test.mjs"
+    "test": "node --test tests/*.test.mjs",
+    "validate:plugin": "node scripts/validate-plugin.mjs",
+    "pack:check": "npm pack --dry-run"
   }
 }

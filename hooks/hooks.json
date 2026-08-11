@@ -1,0 +1,60 @@
+{
+  "description": "Fail-closed routing and lifecycle context for sol-luna-loop.",
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "^Agent$|^spawn_agent$",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${PLUGIN_ROOT}/hooks/pre_tool_use.mjs\"",
+            "command_windows": "node \"%PLUGIN_ROOT%\\hooks\\pre_tool_use.mjs\"",
+            "timeout": 10,
+            "statusMessage": "Checking Sol/Luna agent routing"
+          }
+        ]
+      }
+    ],
+    "SubagentStart": [
+      {
+        "matcher": "^sll_luna_",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${PLUGIN_ROOT}/hooks/lifecycle.mjs\"",
+            "command_windows": "node \"%PLUGIN_ROOT%\\hooks\\lifecycle.mjs\"",
+            "timeout": 10,
+            "statusMessage": "Recording Luna agent start"
+          }
+        ]
+      }
+    ],
+    "SubagentStop": [
+      {
+        "matcher": "^sll_luna_",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${PLUGIN_ROOT}/hooks/lifecycle.mjs\"",
+            "command_windows": "node \"%PLUGIN_ROOT%\\hooks\\lifecycle.mjs\"",
+            "timeout": 10,
+            "statusMessage": "Recording Luna agent stop"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${PLUGIN_ROOT}/hooks/lifecycle.mjs\"",
+            "command_windows": "node \"%PLUGIN_ROOT%\\hooks\\lifecycle.mjs\"",
+            "timeout": 10,
+            "statusMessage": "Recording Sol loop stop"
+          }
+        ]
+      }
+    ]
+  }
+}

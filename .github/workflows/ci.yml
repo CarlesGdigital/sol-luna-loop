@@ -1,0 +1,49 @@
+name: CI
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  deterministic:
+    name: deterministic-${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        node: [20]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Use Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+          cache: npm
+      - name: Install dependencies
+        run: npm ci
+      - name: Validate plugin manifest
+        run: npm run validate:plugin
+      - name: Validate JavaScript syntax
+        shell: pwsh
+        run: |
+          $files = Get-ChildItem -Recurse -File -Filter *.mjs | Where-Object { $_.FullName -notmatch '\\node_modules\\' }
+          foreach ($file in $files) { node --check $file.FullName }
+      - name: Test
+        run: npm test
+      - name: Package dry run
+        run: npm run pack:check
+      - name: Diff whitespace
+        shell: bash
+        run: git diff --check
+      - name: Secret and local-path scan
+        shell: bash
+        run: |
+          ! grep -RInE 'gho_[A-Za-z0-9_-]{20,}|github_pat_[A-Za-z0-9_]+|C:[\\/]Users[\\/](Carles|[^/\\ ]+)' --exclude-dir=.git --exclude-dir=node_modules .
+      - name: Dependency audit
+        run: npm audit --omit=dev --audit-level=high

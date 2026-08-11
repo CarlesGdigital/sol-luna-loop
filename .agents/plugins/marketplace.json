@@ -1,0 +1,20 @@
+{
+  "name": "sol-luna-loop",
+  "interface": {
+    "displayName": "Sol Luna Loop"
+  },
+  "plugins": [
+    {
+      "name": "sol-luna-loop",
+      "source": {
+        "source": "local",
+        "path": "./"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Developer Tools"
+    }
+  ]
+}

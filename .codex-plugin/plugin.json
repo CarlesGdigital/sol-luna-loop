@@ -1,0 +1,35 @@
+{
+  "name": "sol-luna-loop",
+  "version": "1.0.0",
+  "description": "Codex-native Sol/High orchestration with Luna/Max implementation, adversarial review, testing, and self-correction.",
+  "author": {
+    "name": "CarlesGdigital",
+    "url": "https://github.com/CarlesGdigital"
+  },
+  "repository": "https://github.com/CarlesGdigital/sol-luna-loop",
+  "license": "MIT",
+  "keywords": [
+    "codex",
+    "openai",
+    "multi-agent",
+    "orchestration",
+    "plugin",
+    "testing",
+    "ai-agents"
+  ],
+  "skills": "./skills",
+  "interface": {
+    "displayName": "Sol Luna Loop",
+    "shortDescription": "Sol/High control with Luna/Max specialist agents.",
+    "longDescription": "A fail-closed Codex workflow for planning, implementation, testing, adversarial review, security, documentation, and final verification. The parent remains Sol/High while the eight named Luna/Max agents handle bounded work.",
+    "developerName": "CarlesGdigital",
+    "category": "Developer Tools",
+    "capabilities": ["Interactive", "Write"],
+    "defaultPrompt": [
+      "Run the Sol Luna Loop on this repository.",
+      "Verify the installer and all eight Luna agents.",
+      "Review this change adversarially and self-correct failures."
+    ],
+    "brandColor": "#7C3AED"
+  }
+}

@@ -10,6 +10,16 @@ overwrites or removes an agent that is foreign to its manifest. It is safe to
 exercise with temporary homes and project roots before the primary session
 performs any real Codex-scope installation.
 
+The repository is also a Codex plugin release. The public Git-backed install is:
+
+```text
+codex plugin marketplace add CarlesGdigital/sol-luna-loop --ref v1.0.0
+```
+
+Install/enable it from `/plugins`, review and trust its bundled hooks from
+`/hooks`, then start a new Codex session. Plugin installation does not silently
+copy custom agents; run the explicit CLI below from the installed plugin root.
+
 ## Commands
 
 User scope defaults to the current OS home and publishes to
