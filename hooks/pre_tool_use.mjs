@@ -1,7 +1,6 @@
 #!/usr/bin/env node
 
-import { readFile } from "node:fs/promises";
-import path from "node:path";
+import { realpathSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 
 export const DEFINITIVE_AGENT_TYPES = Object.freeze([
@@ -48,8 +47,8 @@ async function readStdin() {
   return Buffer.concat(chunks).toString("utf8").trim();
 }
 
-const modulePath = path.resolve(fileURLToPath(import.meta.url));
-const invokedPath = process.argv[1] ? path.resolve(process.argv[1]) : null;
+const modulePath = realpathSync(fileURLToPath(import.meta.url));
+const invokedPath = process.argv[1] ? realpathSync(process.argv[1]) : null;
 const isMainModule = invokedPath != null && (
   process.platform === "win32"
     ? invokedPath.toLowerCase() === modulePath.toLowerCase()
