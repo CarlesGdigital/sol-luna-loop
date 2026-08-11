@@ -18,8 +18,12 @@ shape, and loop-state transitions.
 ## Local runtime gates
 
 Static tests cannot prove model routing. In a fresh Codex session, run the eight
-minimal probes and record observed model/effort/fallback data. Run the negative
-agent classes through `PreToolUse` and confirm no prohibited child starts.
+minimal probes and record observed model/effort/fallback data. Use separate
+`read-only` and `workspace-write` parent turns for their matching role groups.
+Run negative agent classes through the live runtime: supported `PreToolUse`
+paths must deny before spawn, while a specialized path that opts out must make
+`SubagentStart` inject quarantine context; the live test must then verify that
+the child performed no productive work.
 
 ## CI boundary
 

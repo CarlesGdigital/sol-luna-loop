@@ -1,10 +1,9 @@
 # Installation
 
-The GitHub repository is public at `main`, but `v1.0.0` is not published yet:
-the release gate is blocked on a fresh Codex runtime sandbox check and the
-real marketplace CLI. Use the developer clone below until that gate is cleared.
+## GitHub marketplace after tag publication
 
-## GitHub marketplace (after v1.0.0 publication)
+Confirm that GitHub shows the public `v1.0.0` tag before running the pinned
+command:
 
 ```text
 codex plugin marketplace add CarlesGdigital/sol-luna-loop --ref v1.0.0
@@ -14,6 +13,11 @@ Open `/plugins`, select `sol-luna-loop`, inspect the files, and install/enable
 it. Then open `/hooks`, review the current definition, trust it explicitly, and
 start a new Codex session. Plugin installation alone does not install the
 custom agents or trust hooks.
+
+The trusted lifecycle policy applies to every subagent while the plugin is
+enabled. It quarantines non-`sll_luna_*` roles. Disable the plugin or its hooks
+before using an unrelated workflow that requires built-in or third-party
+subagents.
 
 From the installed plugin root:
 
@@ -43,3 +47,9 @@ After plugin or agent installation, start a fresh Codex session. Verify the
 parent is Sol/High, then run one minimal probe for each exact `sll_luna_*` role.
 Record observed model, effort, sandbox, and fallback status. A file hash proves
 template integrity; only a fresh runtime observation proves routing.
+
+Run the four read-only roles from a parent turn whose live sandbox is
+`read-only`, then run the four writing roles from a parent turn whose live
+sandbox is `workspace-write`. Current Codex runtimes reapply the parent turn's
+live sandbox override to children, so mixing both groups in one verification
+turn cannot prove their distinct defaults.

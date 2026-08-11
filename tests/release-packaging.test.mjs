@@ -44,3 +44,13 @@ test("release includes trusted-by-user hook definition and no personal paths", (
   assert.doesNotMatch(serialized, /C:\\\\Users\\\\Carles/i);
   assert.doesNotMatch(serialized, /gho_[A-Za-z0-9_\-]+/i);
 });
+
+test("SubagentStart wiring reaches prohibited roles for quarantine", () => {
+  const hooks = readJson("hooks/hooks.json");
+  const [start] = hooks.hooks.SubagentStart;
+  const matcher = new RegExp(start.matcher);
+  assert.equal(matcher.test("sll_luna_probe"), true);
+  assert.equal(matcher.test("worker"), true);
+  assert.equal(matcher.test("default"), true);
+  assert.equal(matcher.test("explorer"), true);
+});

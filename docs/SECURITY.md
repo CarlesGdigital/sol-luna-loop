@@ -25,3 +25,18 @@ user paths in tracked metadata. The release reviewer separately checks that
 temporary fixtures, caches, logs, archive paths, and GitHub Actions permissions
 do not enter the published tree; these are release-review gates rather than
 claims made by the installer itself.
+
+For routing, `PreToolUse` denies prohibited roles only on tool paths that emit
+that event. A specialized collaboration path may opt out. The `SubagentStart`
+hook then injects a no-tools/no-edits quarantine instruction and warns the
+parent for a prohibited role or wrong reported model, but the child has already
+been instantiated. Hook-visible role/model tokens are normalized before they
+enter model-visible context. `SubagentStart` does not expose reasoning effort.
+The security boundary is therefore layered: trusted hooks plus the Sol/High
+parent's explicit allow-list plus post-run runtime evidence; no hook is
+represented as OS-level isolation.
+
+The `SubagentStart` matcher intentionally applies to all subagents while this
+plugin is enabled. This makes the exact allow-list visible even when
+`PreToolUse` is bypassed, but it can deny service to unrelated built-in or
+third-party agents. Disable the plugin/hook policy before such workflows.

@@ -1,5 +1,5 @@
 {
-  "description": "Fail-closed routing and lifecycle context for sol-luna-loop.",
+  "description": "Layered routing guardrails and lifecycle context for sol-luna-loop.",
   "hooks": {
     "PreToolUse": [
       {
@@ -17,7 +17,7 @@
     ],
     "SubagentStart": [
       {
-        "matcher": "^sll_luna_",
+        "matcher": "^.*$",
         "hooks": [
           {
             "type": "command",

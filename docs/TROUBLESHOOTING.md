@@ -25,8 +25,10 @@ Run `check` and `doctor`, then start a fresh Codex session. Inspect the native
 ## Hooks are skipped
 
 Open `/hooks`, review the current plugin hook definition, and trust it. A
-changed hook hash requires a new review. `SubagentStart` is informational; the
-blocking decision belongs to `PreToolUse`.
+changed hook hash requires a new review. `PreToolUse` blocks on supported tool
+paths. Some specialized spawn paths may opt out; `SubagentStart` then adds a
+quarantine instruction and warning for prohibited roles. Treat that as a
+guardrail and inspect runtime evidence rather than assuming no child started.
 
 ## Marketplace is missing
 

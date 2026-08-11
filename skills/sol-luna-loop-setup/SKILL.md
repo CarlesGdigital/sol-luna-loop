@@ -56,8 +56,16 @@ Re-run `check` and `doctor` after every upgrade. A stale manifest is repaired by
 Installing or enabling this plugin does not trust its hooks automatically. Open
 `/hooks` in Codex, review the current hook definition, and trust it explicitly
 when you accept the routing policy. The `PreToolUse` hook denies prohibited
-agent spawns before execution. `SubagentStart`, `SubagentStop`, and `Stop` are
-observational lifecycle hooks; they do not replace the PreToolUse boundary.
+agent spawns before execution on supported tool paths. A specialized spawn path
+may opt out of that event; `SubagentStart` then quarantines prohibited roles or
+a canonical role with a wrong reported model, using a no-tools/no-edits
+instruction and warning to the parent. That event does not expose reasoning
+effort. This defense in depth does not replace the parent's exact allow-list and
+runtime telemetry. `SubagentStop` and `Stop` remain observational hooks.
+
+The `SubagentStart` policy matches every child while the plugin is enabled.
+Disable the plugin or its hooks before running an unrelated workflow that
+legitimately requires a built-in or third-party child role.
 
 After installing or changing a plugin or custom-agent files, start a new Codex
 session before relying on discovery. Never claim runtime routing from TOML hashes
@@ -65,25 +73,37 @@ alone.
 
 ## Runtime verification
 
-In the new session, verify the parent is Sol/High, then run a minimal probe for
-each of these exact custom agent types:
+Codex reapplies the parent turn's live sandbox and approval overrides to every
+child. A custom agent's `sandbox_mode` is therefore its default, not a boundary
+that can override the active parent turn. When sandbox behavior is an acceptance
+gate, do not mix read-only and writing roles in one parent turn.
+
+Use two fresh Sol/High verification turns. Start the first with a live
+`read-only` sandbox and run only:
 
 ```text
 sll_luna_probe
 sll_luna_explorer
+sll_luna_reviewer
+sll_luna_security_auditor
+```
+
+Start the second with a live `workspace-write` sandbox and run only:
+
+```text
 sll_luna_implementer
 sll_luna_fixer
 sll_luna_test_engineer
-sll_luna_reviewer
-sll_luna_security_auditor
 sll_luna_docs_writer
 ```
 
-Record the observed `agent_type`, model, configured/observed effort, sandbox,
-start/stop status, and any fallback or override. The required sequence is
-Sol/High parent → Luna/Max child → Sol/High parent. If a role is not discoverable,
-stop with `RESTART_REQUIRED` or `BLOCKED_RUNTIME_RESTART_REQUIRED` rather than
-falling back to a built-in agent.
+Spawn every child with its explicit `agent_type` and `fork_turns="none"`; do not
+pass model or reasoning overrides. Record the observed `agent_type`, model,
+configured/observed effort, live sandbox, start/stop status, and any fallback or
+override. The required sequence in each turn is Sol/High parent -> Luna/Max child
+-> Sol/High parent. If a role is not discoverable, or if its live sandbox does
+not match the verification turn, stop with `RESTART_REQUIRED` or
+`BLOCKED_RUNTIME_RESTART_REQUIRED` rather than falling back to a built-in agent.
 
 ## Uninstall
 

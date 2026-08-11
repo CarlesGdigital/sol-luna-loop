@@ -5,11 +5,10 @@ agents. The loop makes planning, implementation, review, testing, security,
 documentation, and final verification explicit, while preserving a fail-closed
 installer for user- and project-scoped custom agents.
 
-> Release status: the GitHub repository and `main` branch are public and CI is
-> green at `8e73b19`, but the `v1.0.0` tag/release is intentionally withheld
-> until a fresh Codex runtime verifies the contractual sandbox and the real
-> marketplace/E2E gates. The pinned marketplace command below becomes valid
-> only after that tag is published.
+> Pinned release target: `v1.0.0`. The immutable marketplace command below is
+> supported once GitHub shows that public tag. Runtime routing must still be
+> verified after installation because static templates and hashes cannot prove
+> a live model.
 
 ## Requirements
 
@@ -20,7 +19,7 @@ installer for user- and project-scoped custom agents.
 
 The plugin does not call a model API and does not edit global `config.toml`.
 
-## Recommended install: GitHub marketplace (after v1.0.0 publication)
+## Recommended install: GitHub marketplace after tag publication
 
 Add the pinned public marketplace source:
 
@@ -46,6 +45,18 @@ Open the Codex plugin browser with `/plugins` (or `codex /plugins`), select the
 Installing the plugin does not silently trust hooks or copy custom agents. The
 setup command is explicit, idempotent, hash-checked, and preserves foreign
 files. A new Codex session is required after plugin or agent changes.
+
+Codex reapplies a parent turn's live sandbox override to its children. Verify
+the four read-only roles from a `read-only` parent turn and the four writing
+roles from a `workspace-write` parent turn. The hook denies prohibited roles on
+supported `PreToolUse` paths and quarantines a prohibited role at
+`SubagentStart` when a specialized spawn path bypasses `PreToolUse`; hooks remain
+guardrails, so the parent must also enforce the exact allow-list.
+
+The lifecycle matcher is intentionally global while the plugin is enabled: any
+non-definitive built-in or third-party child receives quarantine context. Disable
+this plugin or its hooks before starting a workflow that legitimately requires
+other child roles.
 
 ## Developer install
 
@@ -101,9 +112,10 @@ node scripts/bootstrap-agents.mjs doctor --scope user --json
 ```
 
 These commands prove package/installer health. They do not by themselves prove
-runtime routing. Routing is `OK` only after a fresh Codex session observes all
-eight exact `sll_luna_*` agent types running as `gpt-5.6-luna` with `max` effort;
-see [Model routing](docs/MODEL_ROUTING.md).
+runtime routing. Routing is `OK` only after fresh Codex sessions observe all
+eight exact `sll_luna_*` agent types running as `gpt-5.6-luna` with `max`
+effort; the two sandbox groups must be verified in matching parent turns. See
+[Model routing](docs/MODEL_ROUTING.md).
 
 ## Documentation
 

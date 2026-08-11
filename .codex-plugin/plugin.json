@@ -21,7 +21,7 @@
   "interface": {
     "displayName": "Sol Luna Loop",
     "shortDescription": "Sol/High control with Luna/Max specialist agents.",
-    "longDescription": "A fail-closed Codex workflow for planning, implementation, testing, adversarial review, security, documentation, and final verification. The parent remains Sol/High while the eight named Luna/Max agents handle bounded work.",
+    "longDescription": "A layered Codex workflow for planning, implementation, testing, adversarial review, security, documentation, and final verification. The parent remains Sol/High while trusted routing guardrails constrain bounded work to the eight named Luna/Max agents.",
     "developerName": "CarlesGdigital",
     "category": "Developer Tools",
     "capabilities": ["Interactive", "Write"],

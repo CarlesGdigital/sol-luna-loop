@@ -3,6 +3,8 @@
 All eight definitive templates pin `model = "gpt-5.6-luna"` and
 `model_reasoning_effort = "max"`. Read-only roles use `sandbox_mode =
 "read-only"`; bounded writing roles use `sandbox_mode = "workspace-write"`.
+These are role defaults. Codex reapplies a live parent sandbox override to its
+children, so runtime verification uses matching read-only and writing turns.
 
 | Role | Sandbox | Contract |
 | --- | --- | --- |
