@@ -2,11 +2,11 @@
 
 ## GitHub marketplace after tag publication
 
-Confirm that GitHub shows the public `v1.0.0` tag before running the pinned
+Confirm that GitHub shows the public `v1.0.1` tag before running the pinned
 command:
 
 ```text
-codex plugin marketplace add CarlesGdigital/sol-luna-loop --ref v1.0.0
+codex plugin marketplace add CarlesGdigital/sol-luna-loop --ref v1.0.1
 ```
 
 Open `/plugins`, select `sol-luna-loop`, inspect the files, and install/enable

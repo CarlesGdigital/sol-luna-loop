@@ -14,8 +14,8 @@ test("release exposes a valid plugin manifest and root skill", () => {
   const manifest = readJson(".codex-plugin/plugin.json");
   const packageJson = readJson("package.json");
   assert.equal(manifest.name, "sol-luna-loop");
-  assert.equal(manifest.version, "1.0.0");
-  assert.equal(packageJson.version, "1.0.0");
+  assert.equal(manifest.version, "1.0.1");
+  assert.equal(packageJson.version, "1.0.1");
   assert.equal(manifest.license, "MIT");
   assert.equal(manifest.skills, "./skills");
   assert.equal(typeof manifest.repository, "string");

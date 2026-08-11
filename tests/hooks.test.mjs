@@ -90,8 +90,19 @@ test("SubagentStart does not reflect an unsafe agent type into model context", (
   assert.match(start.hookSpecificOutput.additionalContext, /ROUTING_DENIED unknown/);
 });
 
-test("SubagentStart quarantines bypass, unknown, or invalid permission modes", () => {
-  for (const permissionMode of ["bypassPermissions", "futureUnsafeMode", null]) {
+test("SubagentStart accepts Codex never-approval mode for a canonical role", () => {
+  const start = evaluateLifecycle({
+    hook_event_name: "SubagentStart",
+    agent_type: "sll_luna_probe",
+    model: "gpt-5.6-luna",
+    permission_mode: "bypassPermissions",
+  });
+  assert.doesNotMatch(JSON.stringify(start), /ROUTING_DENIED/);
+  assert.match(start.hookSpecificOutput.additionalContext, /definitive allowed role/i);
+});
+
+test("SubagentStart quarantines unknown or invalid permission modes", () => {
+  for (const permissionMode of ["futureUnsafeMode", null]) {
     const start = evaluateLifecycle({
       hook_event_name: "SubagentStart",
       agent_type: "sll_luna_probe",

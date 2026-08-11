@@ -37,7 +37,9 @@ exact allow-list.
 
 The lifecycle matcher covers every subagent type while the plugin is enabled.
 It also quarantines canonical roles that report a model other than
-`gpt-5.6-luna`, `bypassPermissions`, or an unknown permission mode. The global
+`gpt-5.6-luna`, or an unknown permission mode. Codex maps approval policy
+`never` to the known `bypassPermissions` event value, so the hook accepts it and
+leaves sandbox enforcement to the parent runtime. The global
 matcher is intentional exact-loop policy and can conflict with unrelated agent
 plugins; disable this plugin/hook policy for those workflows.
 

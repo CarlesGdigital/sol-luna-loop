@@ -8,18 +8,22 @@ runtime proof.
 
 `RELEASE_CANDIDATE_VALIDATION`
 
-The public repository, marketplace install, eight-role routing, staged sandbox
-verification, model-backed failure/replan/fix loop, release-candidate CI, and
-the upgraded live hook quarantine have passed. The final candidate still
-requires clean-room release artifacts, independent checksums, the final ledger
-CI, the annotated `v1.0.0` tag, and the GitHub Release.
+The public repository, eight-role routing, staged sandbox verification,
+model-backed failure/replan/fix loop, and the `v1.0.0` release passed their
+recorded gates. A post-release positive smoke then exposed that Codex reports
+approval policy `never` to `SubagentStart` as `bypassPermissions`; `v1.0.0`
+incorrectly quarantined that valid event. The corrected `v1.0.1` candidate
+accepts this documented mapping while retaining quarantine for unknown, null,
+or malformed permission modes. It still requires candidate CI, marketplace
+upgrade, live positive and negative hook smokes, clean-room artifacts,
+independent checksums, the annotated `v1.0.1` tag, and the GitHub Release.
 
 ## Deterministic package evidence
 
-- Package and plugin version: `1.0.0`.
-- Full suite: 59/59 passed; zero failures, skips, or todos.
+- Package and plugin version: `1.0.1`.
+- Full suite: 60/60 passed; zero failures, skips, or todos.
 - Local plugin validator and `git diff --check`: passed.
-- User installer `check` and `doctor`: `ok:true`, manifest `1.0.0`, eight exact
+- User installer `check` and `doctor`: `ok:true`, manifest `1.0.1`, eight exact
   owned role hashes, inactive lock, zero issues.
 - The repository is dependency-free at runtime; source CI uses the committed
   npm lockfile and audits production dependencies.
@@ -31,7 +35,8 @@ CI, the annotated `v1.0.0` tag, and the GitHub Release.
   `31514358310` on Ubuntu, macOS, and Windows.
 - The marketplace source was added from the public GitHub repository and
   `sol-luna-loop@sol-luna-loop` version `1.0.0` was installed and enabled in the
-  real Codex plugin cache.
+  real Codex plugin cache. That immutable release is superseded by the pending
+  `v1.0.1` corrective release.
 - Codex listed four installed plugin hooks. After the marketplace upgrade, all
   four definitions were explicitly trusted through the official app-server
   config API. The Windows commands resolved to absolute plugin-cache paths.
@@ -70,10 +75,13 @@ unknown `sol` type was rejected by the runtime. This is why the release adds a
 `SubagentStart` quarantine for any non-definitive role and documents hooks as
 guardrails rather than complete enforcement. The quarantine also rejects a
 canonical role with a wrong reported model and normalizes untrusted role/model
-tokens before emitting context. It rejects bypass or unknown permission modes
-and malformed lifecycle JSON exits 2; reasoning effort is not present in that
-event. Its global matcher intentionally quarantines unrelated child roles while
-the plugin is enabled, an availability tradeoff documented for users.
+tokens before emitting context. Codex maps approval policy `never` to the known
+lifecycle value `bypassPermissions`, so that value is accepted; unknown, null,
+or malformed permission modes remain quarantined, and malformed lifecycle JSON
+exits 2. Reasoning effort and sandbox mode are not present in that event, so the
+parent runtime remains authoritative for those controls. Its global matcher
+intentionally quarantines unrelated child roles while the plugin is enabled,
+an availability tradeoff documented for users.
 The first Windows live run exposed a real packaging defect: `%PLUGIN_ROOT%`
 remained literal and `SubagentStart` exited 1. Regression coverage was added,
 the commands were changed to Codex-expanded `${PLUGIN_ROOT}`, and CI repeated.
@@ -111,12 +119,12 @@ outside both repositories.
 
 Before changing this status to `VERIFIED_READY`, the primary session must:
 
-1. [x] push the candidate and wait for all GitHub CI jobs;
-2. [x] upgrade the real installed plugin, review/trust the new hook hash, and
-   prove the live `SubagentStart` quarantine;
+1. [ ] push the `v1.0.1` candidate and wait for all GitHub CI jobs;
+2. [ ] upgrade the real installed plugin, review/trust the hooks, and prove
+   both a positive definitive-role start and the negative quarantine;
 3. [ ] create and extract the release archives, rerun tests/validator/lifecycle,
    and write `SHA256SUMS` from independently computed hashes;
 4. [ ] rerun user `check`/`doctor`, secret/local-path scans, and final diff
    review;
 5. [ ] push the final ledger commit, wait for CI again, then create annotated
-   tag `v1.0.0` and the GitHub Release with all assets.
+   tag `v1.0.1` and the GitHub Release with all assets.

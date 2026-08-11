@@ -1,6 +1,6 @@
 # Installer contract
 
-The installer is bundled by the `sol-luna-loop` Codex plugin v1.0.0. Install the
+The installer is bundled by the `sol-luna-loop` Codex plugin v1.0.1. Install the
 plugin from the pinned public Git marketplace, review/trust hooks in `/hooks`,
 start a new Codex session, and then run this CLI from the installed plugin root.
 The plugin does not edit global Codex configuration or install custom agents

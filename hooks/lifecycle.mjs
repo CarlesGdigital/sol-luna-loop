@@ -4,7 +4,13 @@ import { DEFINITIVE_AGENT_TYPES } from "./pre_tool_use.mjs";
 import { realpathSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 
-const ALLOWED_PERMISSION_MODES = new Set(["default", "acceptEdits", "plan", "dontAsk"]);
+const ALLOWED_PERMISSION_MODES = new Set([
+  "default",
+  "acceptEdits",
+  "plan",
+  "dontAsk",
+  "bypassPermissions",
+]);
 
 function safeToken(value, fallback) {
   return typeof value === "string" && /^[A-Za-z0-9._-]{1,64}$/.test(value) ? value : fallback;

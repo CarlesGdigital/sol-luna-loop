@@ -5,7 +5,7 @@ agents. The loop makes planning, implementation, review, testing, security,
 documentation, and final verification explicit, while preserving a fail-closed
 installer for user- and project-scoped custom agents.
 
-> Pinned release target: `v1.0.0`. The immutable marketplace command below is
+> Pinned release target: `v1.0.1`. The immutable marketplace command below is
 > supported once GitHub shows that public tag. Runtime routing must still be
 > verified after installation because static templates and hashes cannot prove
 > a live model.
@@ -24,7 +24,7 @@ The plugin does not call a model API and does not edit global `config.toml`.
 Add the pinned public marketplace source:
 
 ```text
-codex plugin marketplace add CarlesGdigital/sol-luna-loop --ref v1.0.0
+codex plugin marketplace add CarlesGdigital/sol-luna-loop --ref v1.0.1
 ```
 
 Open the Codex plugin browser with `/plugins` (or `codex /plugins`), select the
