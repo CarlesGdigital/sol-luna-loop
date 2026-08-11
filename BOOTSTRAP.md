@@ -10,7 +10,9 @@ overwrites or removes an agent that is foreign to its manifest. It is safe to
 exercise with temporary homes and project roots before the primary session
 performs any real Codex-scope installation.
 
-The repository is also a Codex plugin release. The public Git-backed install is:
+The repository is also prepared as a Codex plugin. The public Git-backed
+install below is intentionally pending the final runtime gate; do not run it
+until the `v1.0.0` tag exists:
 
 ```text
 codex plugin marketplace add CarlesGdigital/sol-luna-loop --ref v1.0.0

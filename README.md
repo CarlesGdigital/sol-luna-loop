@@ -5,6 +5,12 @@ agents. The loop makes planning, implementation, review, testing, security,
 documentation, and final verification explicit, while preserving a fail-closed
 installer for user- and project-scoped custom agents.
 
+> Release status: the GitHub repository and `main` branch are public and CI is
+> green at `8e73b19`, but the `v1.0.0` tag/release is intentionally withheld
+> until a fresh Codex runtime verifies the contractual sandbox and the real
+> marketplace/E2E gates. The pinned marketplace command below becomes valid
+> only after that tag is published.
+
 ## Requirements
 
 - A current Codex build with multi-agent tools enabled.
@@ -14,7 +20,7 @@ installer for user- and project-scoped custom agents.
 
 The plugin does not call a model API and does not edit global `config.toml`.
 
-## Recommended install: GitHub marketplace
+## Recommended install: GitHub marketplace (after v1.0.0 publication)
 
 Add the pinned public marketplace source:
 

@@ -1,6 +1,10 @@
 # Installation
 
-## GitHub marketplace
+The GitHub repository is public at `main`, but `v1.0.0` is not published yet:
+the release gate is blocked on a fresh Codex runtime sandbox check and the
+real marketplace CLI. Use the developer clone below until that gate is cleared.
+
+## GitHub marketplace (after v1.0.0 publication)
 
 ```text
 codex plugin marketplace add CarlesGdigital/sol-luna-loop --ref v1.0.0
