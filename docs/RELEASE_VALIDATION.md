@@ -33,9 +33,11 @@ created under this gate.
 ## Clean-room distribution evidence
 
 - Fresh clone source: `https://github.com/CarlesGdigital/sol-luna-loop`.
-- Clone commit: `8e73b19f33f727cf3d208927babf6aa364706662`.
-- From that clone: `npm ci`, `npm test` (51/51), plugin validation, and package
-  dry-run all passed.
+- Final clone commit: `03e5779542baa7d8ca2351a54323cd8076806ddc`.
+- From that clone: `npm ci`, `npm test` (51/51), and plugin validation passed.
+- The implementation clean-room at `8e73b19f33f727cf3d208927babf6aa364706662`
+  also passed package dry-run and the disposable project lifecycle below; the
+  later commit only records the blocked release ledger and documentation.
 - A disposable project-scoped fixture from that clone completed install,
   `check`, `doctor`, and `uninstall`; all eight role hashes were exact and the
   managed manifest reported plugin version `1.0.0`.
