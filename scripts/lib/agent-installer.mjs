@@ -649,6 +649,7 @@ export async function check({
   const paths = resolveScope({ scope, userHome, projectRoot });
   const templates = await loadTemplates(templateDirectory);
   const base = baseResult("check", paths, templates, dryRun);
+  await assertSafeExistingDirectory(paths.agentsDir);
   const state = await inspectState(paths, templates);
   const issues = [];
   if (!state.manifestInfo.exists) issues.push({ code: "MANIFEST_MISSING", message: "managed manifest is missing" });
@@ -695,6 +696,7 @@ export async function doctor({
 } = {}) {
   const paths = resolveScope({ scope, userHome, projectRoot });
   const templates = await loadTemplates(templateDirectory);
+  await assertSafeExistingDirectory(paths.agentsDir);
   const state = await inspectState(paths, templates);
   const lockState = await inspectLock(paths.lock);
   const major = Number.parseInt(process.versions.node.split(".")[0], 10);
@@ -726,10 +728,6 @@ export async function uninstall({
   const base = baseResult("uninstall", paths, templates, dryRun);
   await assertSafeExistingDirectory(paths.agentsDir);
   const state = await inspectState(paths, templates);
-  if (!state.manifestInfo.exists) {
-    return { ...base, ok: true, changed: false, removed: [], conflicts: [], manifest: publicManifestInfo(state.manifestInfo), agents: state.agents };
-  }
-  if (!state.manifestInfo.valid) throw state.manifestInfo.error;
 
   const planFor = (currentState) => {
     const conflicts = currentState.conflicts.filter((entry) => entry.reason === "tampered-managed-file" || entry.reason === "foreign-type" || entry.reason === "unowned-file");
@@ -739,6 +737,20 @@ export async function uninstall({
     return { conflicts, removable, wouldRemove };
   };
   const initialPlan = planFor(state);
+  if (!state.manifestInfo.exists) {
+    return {
+      ...base,
+      ok: initialPlan.conflicts.length === 0,
+      changed: false,
+      ...(dryRun ? { wouldChange: false } : {}),
+      removed: [],
+      conflicts: initialPlan.conflicts,
+      manifest: publicManifestInfo(state.manifestInfo),
+      agents: state.agents,
+      ...(initialPlan.conflicts.length ? { error: "uninstall conflicts preserve managed files" } : {}),
+    };
+  }
+  if (!state.manifestInfo.valid) throw state.manifestInfo.error;
   if (dryRun) {
     return { ...base, ok: initialPlan.conflicts.length === 0, changed: false, wouldChange: initialPlan.conflicts.length === 0 && Boolean(initialPlan.wouldRemove.length || state.manifestInfo.exists), wouldRemove: initialPlan.wouldRemove, removed: [], conflicts: initialPlan.conflicts, manifest: publicManifestInfo(state.manifestInfo), agents: state.agents, ...(initialPlan.conflicts.length ? { error: "uninstall conflicts preserve managed files" } : {}) };
   }
@@ -751,11 +763,20 @@ export async function uninstall({
     // the state observed before acquiring it.
     await assertSafeExistingDirectory(paths.agentsDir);
     const lockedState = await inspectState(paths, templates);
+    const lockedPlan = planFor(lockedState);
     if (!lockedState.manifestInfo.exists) {
-      return { ...base, ok: true, changed: false, removed: [], conflicts: [], manifest: publicManifestInfo(lockedState.manifestInfo), agents: lockedState.agents };
+      return {
+        ...base,
+        ok: lockedPlan.conflicts.length === 0,
+        changed: false,
+        removed: [],
+        conflicts: lockedPlan.conflicts,
+        manifest: publicManifestInfo(lockedState.manifestInfo),
+        agents: lockedState.agents,
+        ...(lockedPlan.conflicts.length ? { error: "uninstall conflicts preserve managed files" } : {}),
+      };
     }
     if (!lockedState.manifestInfo.valid) throw lockedState.manifestInfo.error;
-    const lockedPlan = planFor(lockedState);
     for (const agent of lockedPlan.removable) await unlink(agent.target);
     if (lockedPlan.conflicts.length) {
       return {

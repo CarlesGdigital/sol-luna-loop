@@ -50,18 +50,40 @@ The managed manifest is
 plugin version, scope, generation time, and the expected model, reasoning,
 sandbox, SHA-256, and repository-relative template origin for every role.
 
+Every existing component of `<agents-dir>` is validated with `lstat` before the
+installer uses it. In particular, read-only `check` and `doctor` validate the
+components before reading managed state or lock state. A pre-existing
+symlink/junction or non-directory component fails closed with structured
+`PATH_UNSAFE` and is never followed. A genuinely missing path continues with
+the ordinary missing-install diagnostics.
+
 Mutating actions serialize through the exclusive
 `<agents-dir>/.sol-luna-loop.lock`. A live lock is an error; it is never
-bypassed. Every replacement of an exact manifest-owned file is backed up under
+bypassed. Lock setup uses exclusive creation, writes and flushes its metadata,
+and, if setup fails after creation, closes and removes that same-token lock
+where it can still prove ownership. The original setup error is preserved; a
+cleanup failure is attached as structured cleanup evidence. `release()` checks
+the same token and removes the lock before marking it released. Missing,
+unsafe, malformed, or replacement-token locks remain in place and return
+`LOCK_LOST`; after the original owned metadata is restored, the owner may retry
+release.
+
+Every replacement of an exact manifest-owned file is backed up under
 `<agents-dir>/.sol-luna-loop-backups/<timestamp>/` and the backup hash is
 verified before publication. Files are written to same-directory temporary
-files, flushed, and then published atomically. Temporary files are cleaned up.
+files, flushed, and then published atomically per file. Temporary files are
+cleaned up. This does not make the complete install a process-wide transaction;
+rollback restores complete old/new files where possible when a later step fails.
 
 An absent-manifest file is foreign even if its bytes happen to match a current
 template. A manifest-owned file whose bytes no longer match its recorded hash
 is a tampered conflict. Both cases are preserved. Uninstall removes only exact
 manifest-owned regular files; foreign files, symlinks, directories, and local
-edits remain in place and produce a nonzero conflict result.
+edits remain in place and produce a nonzero conflict result. With no manifest,
+uninstall is idempotent only when no canonical role path exists. An existing
+canonical role path is returned as an `unowned-file` or `foreign-type` conflict
+and is preserved, including in `--dry-run`. The final post-lock inspection uses
+the same rule if the manifest disappears while uninstall is waiting to mutate.
 
 `check` verifies exact bytes, hashes, pins, and ownership without mutation. A
 valid prior-version manifest remains usable ownership evidence, but both
@@ -70,6 +92,14 @@ until `install` upgrades the manifest. `doctor` is read-only and reports stable
 action, scope, platform, Node gate, paths, lock state, manifest validity,
 per-agent status, and deterministic issue codes. Runtime discovery in Codex is a
 separate gate and may require a fresh Codex task after installation.
+
+The exclusive lock serializes cooperating installer processes. Component
+checks, lock-token checks, and manifest ownership/hash checks fail closed when
+they detect unsafe or changed state. They are not a security boundary against
+a hostile process with equivalent filesystem permissions that races between
+checks and mutations; such a process can already modify the same files
+directly. Do not run this installer elevated against a user/project tree that
+is writable by a less-privileged or untrusted actor.
 
 The writing-role contracts are intentionally restrictive: implementer forbids
 merge, push, PR, and deploy actions; fixer must record changed hypotheses and
@@ -94,3 +124,6 @@ node scripts/bootstrap-agents.mjs install --dry-run --json
 The test suite uses temporary user/project scopes only. The primary session
 must independently inspect the diff, rerun the suite, perform temporary
 lifecycle checks, and decide whether the real Codex user scope may be touched.
+For a read-only preflight, run `check` and `doctor` against an explicit
+temporary scope and confirm that `PATH_UNSAFE` refuses any pre-existing unsafe
+component before the target is read.

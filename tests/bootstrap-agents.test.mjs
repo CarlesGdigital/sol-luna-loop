@@ -230,6 +230,39 @@ test("uninstall removes only exact owned files and preserves conflicts", async (
   });
 });
 
+test("uninstall reports a foreign canonical role when no manifest exists", async () => {
+  await withRoots(async (root) => {
+    const runs = [];
+    for (const dryRun of [false, true]) {
+      const fixture = path.join(root, dryRun ? "dry-run" : "ordinary");
+      const target = targetFor(fixture, roles[0]);
+      const foreign = Buffer.from("hand-chosen foreign bytes\n");
+      await mkdir(path.dirname(target), { recursive: true });
+      await writeFile(target, foreign);
+
+      const args = ["uninstall", "--scope", "user", "--user-home", fixture];
+      if (dryRun) args.push("--dry-run");
+      args.push("--json");
+      const result = await runCli(args);
+      runs.push({ dryRun, result, payload: JSON.parse(result.stdout), foreign, target });
+    }
+
+    for (const { dryRun, result, payload, foreign, target } of runs) {
+      assert.equal(result.code, 1, result.stderr || result.stdout);
+      assert.equal(payload.ok, false);
+      assert.equal(payload.dryRun, dryRun);
+      assert.equal(payload.changed, false);
+      assert.equal(payload.error, "uninstall conflicts preserve managed files");
+      assert.equal(payload.conflicts.length, 1);
+      assert.deepEqual(
+        payload.conflicts.map(({ name, reason }) => ({ name, reason })),
+        [{ name: roles[0], reason: "unowned-file" }],
+      );
+      assert.deepEqual(await readFile(target), foreign);
+    }
+  });
+});
+
 test("active lock refuses mutation and read-only actions only report it", async () => {
   await withRoots(async (root) => {
     await mkdir(path.dirname(lockFor(root)), { recursive: true });
@@ -462,6 +495,63 @@ test("install dry-run refuses an agents junction without creating or mutating an
     assert.equal(await exists(path.join(junctionHome, ".codex", "agents", ".sol-luna-loop.lock")), false);
     const junctionStats = await lstat(junctionPath);
     assert.equal(junctionStats.isSymbolicLink(), true);
+  });
+});
+
+test("check and doctor refuse an agents junction without touching its target", async () => {
+  await withRoots(async (root) => {
+    const targetHome = path.join(root, "healthy-home");
+    assert.equal((await install(targetHome, "--json")).code, 0);
+    const targetAgents = path.join(targetHome, ".codex", "agents");
+    const sentinel = path.join(targetAgents, "sentinel.txt");
+    await writeFile(sentinel, "junction target sentinel\n");
+    const protectedPaths = [
+      sentinel,
+      targetFor(targetHome, roles[0]),
+      manifestFor(targetHome),
+    ];
+    const protectedBytes = new Map(
+      await Promise.all(protectedPaths.map(async (filePath) => [filePath, await readFile(filePath)])),
+    );
+
+    const junctionHome = path.join(root, "junction-home");
+    await mkdir(path.join(junctionHome, ".codex"), { recursive: true });
+    const junctionPath = path.join(junctionHome, ".codex", "agents");
+    await symlink(targetAgents, junctionPath, "junction");
+
+    const results = [];
+    for (const action of ["check", "doctor"]) {
+      const result = await runCli([action, "--scope", "user", "--user-home", junctionHome, "--json"]);
+      results.push({ action, result, payload: JSON.parse(result.stdout) });
+    }
+    for (const { result, payload } of results) {
+      assert.equal(result.code, 2, result.stderr || result.stdout);
+      assert.equal(payload.ok, false);
+      assert.match(payload.error, /^PATH_UNSAFE:/);
+    }
+
+    for (const [filePath, before] of protectedBytes) assert.deepEqual(await readFile(filePath), before);
+    assert.equal((await lstat(junctionPath)).isSymbolicLink(), true);
+  });
+});
+
+test("check and doctor refuse a non-directory path component without mutation", async () => {
+  await withRoots(async (root) => {
+    const codexPath = path.join(root, ".codex");
+    const foreign = Buffer.from("not a directory\n");
+    await writeFile(codexPath, foreign);
+
+    const results = [];
+    for (const action of ["check", "doctor"]) {
+      const result = await runCli([action, "--scope", "user", "--user-home", root, "--json"]);
+      results.push({ action, result, payload: JSON.parse(result.stdout) });
+    }
+    for (const { result, payload } of results) {
+      assert.equal(result.code, 2, result.stderr || result.stdout);
+      assert.equal(payload.ok, false);
+      assert.match(payload.error, /^PATH_UNSAFE:/);
+      assert.deepEqual(await readFile(codexPath), foreign);
+    }
   });
 });
 
