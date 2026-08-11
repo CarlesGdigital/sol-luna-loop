@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import { constants as fsConstants } from "node:fs";
-import { access, mkdtemp, mkdir, readFile, readdir, rm, stat, lstat, symlink, writeFile } from "node:fs/promises";
+import { access, mkdtemp, mkdir, readFile, readdir, realpath, rm, stat, lstat, symlink, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { spawn } from "node:child_process";
@@ -68,7 +68,7 @@ async function runCli(args) {
 }
 
 async function withRoots(callback) {
-  const root = await mkdtemp(path.join(os.tmpdir(), "sll-definitive-test-"));
+  const root = await mkdtemp(path.join(await realpath(os.tmpdir()), "sll-definitive-test-"));
   try {
     return await callback(root);
   } finally {

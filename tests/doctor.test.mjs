@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, realpath, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { spawn } from "node:child_process";
@@ -28,7 +28,7 @@ function runCli(args) {
 }
 
 async function withRoot(callback) {
-  const root = await mkdtemp(path.join(os.tmpdir(), "sll-doctor-test-"));
+  const root = await mkdtemp(path.join(await realpath(os.tmpdir()), "sll-doctor-test-"));
   try {
     return await callback(root);
   } finally {

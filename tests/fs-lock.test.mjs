@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { access, mkdtemp, mkdir, open as openReal, readFile, rm, writeFile } from "node:fs/promises";
+import { access, mkdtemp, mkdir, open as openReal, readFile, realpath, rm, writeFile } from "node:fs/promises";
 import { constants as fsConstants } from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -19,7 +19,7 @@ async function exists(filePath) {
 }
 
 async function withRoot(callback) {
-  const root = await mkdtemp(path.join(os.tmpdir(), "sll-fs-lock-test-"));
+  const root = await mkdtemp(path.join(await realpath(os.tmpdir()), "sll-fs-lock-test-"));
   try {
     return await callback(root);
   } finally {
