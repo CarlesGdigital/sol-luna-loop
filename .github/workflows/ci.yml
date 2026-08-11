@@ -40,7 +40,7 @@ jobs:
         run: npm run pack:check
       - name: Diff whitespace
         shell: bash
-        run: git diff --check
+        run: git show --check --oneline HEAD
       - name: Secret and local-path scan
         shell: bash
         run: |

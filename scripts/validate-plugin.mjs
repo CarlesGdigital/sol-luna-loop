@@ -62,7 +62,9 @@ export async function validatePluginRoot(pluginRoot) {
   await requireFile(path.join(root, "hooks", "pre_tool_use.mjs"), errors, "PreToolUse command");
   await requireFile(path.join(root, "hooks", "lifecycle.mjs"), errors, "lifecycle command");
   const marketplace = await readJson(path.join(root, ".agents", "plugins", "marketplace.json"), errors, "marketplace");
-  const entry = marketplace?.plugins?.find((item) => item?.name === "sol-luna-loop");
+  const entries = Array.isArray(marketplace?.plugins) ? marketplace.plugins : [];
+  if (marketplace && !Array.isArray(marketplace.plugins)) errors.push("marketplace.plugins must be an array");
+  const entry = entries.find((item) => item?.name === "sol-luna-loop");
   if (!entry) errors.push("marketplace must expose sol-luna-loop");
   else {
     if (entry.source?.source !== "local" || entry.source?.path !== "./") errors.push("marketplace must point to the single plugin root with ./");
