@@ -18,8 +18,12 @@ shape, and loop-state transitions.
 ## Local runtime gates
 
 Static tests cannot prove model routing. In a fresh Codex session, run the eight
-minimal probes and record observed model/effort/fallback data. Use separate
-`read-only` and `workspace-write` parent turns for their matching role groups.
+minimal probes and record observed model/effort/fallback data. A
+`danger-full-access` parent may verify all eight without a sandbox mismatch
+failure. Use separate `read-only` and `workspace-write` parent turns only for an
+explicit least-privilege enforcement test. When public runtime details omit
+model or effort, run `scripts/verify-agent-runtime.mjs` against the exact child
+thread ID and accept `ok: true` regardless of `sandboxOverride`.
 Run negative agent classes through the live runtime: supported `PreToolUse`
 paths must deny before spawn, while a specialized path that opts out must make
 `SubagentStart` inject quarantine context; the live test must then verify that

@@ -3,8 +3,10 @@
 - A fresh Codex session is required after plugin or custom-agent changes.
 - TOML hashes and installer diagnostics do not prove runtime model routing.
 - A parent turn's live sandbox/approval override is reapplied to children and
-  can supersede the role's TOML default; mixed sandbox groups require separate
-  verification turns.
+  can supersede the role's TOML default. `danger-full-access` is compatible and
+  is recorded rather than rejected; role-specific no-write rules are then
+  behavioral rather than OS-enforced. Separate matching turns are required
+  only to test least-privilege enforcement itself.
 - Hooks require explicit user trust and are guardrails, not OS isolation or a
   replacement for runtime acceptance. Specialized spawn paths may bypass
   `PreToolUse`; the `SubagentStart` quarantine starts after child creation and

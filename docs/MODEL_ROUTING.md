@@ -14,14 +14,20 @@ types are `sll_luna_probe`, `sll_luna_explorer`, `sll_luna_implementer`,
 
 Codex reapplies the parent turn's live sandbox and approval overrides to every
 child. The TOML `sandbox_mode` is a default; it cannot override an explicit live
-parent setting. Verify the roles in two matching parent turns:
+parent setting. The routing gate accepts `read-only`, `workspace-write`, and
+`danger-full-access`; a different live sandbox is an observed parent override,
+not a role/model failure. In particular, a user-selected `danger-full-access`
+turn may run all eight roles without opening replacement tasks.
+
+Use matching turns only for an optional least-privilege enforcement test:
 
 | Parent live sandbox | Roles to verify |
 | --- | --- |
 | `read-only` | probe, explorer, reviewer, security auditor |
 | `workspace-write` | implementer, fixer, test engineer, docs writer |
 
-Do not mix the groups when sandbox behavior is an acceptance gate.
+Do not mix the groups only when the user explicitly requires proof of their
+distinct OS-enforced sandbox defaults.
 
 `hooks/hooks.json` registers `PreToolUse` for the `Agent`/`spawn_agent` tool.
 `hooks/pre_tool_use.mjs` denies unknown types and incompatible model or effort
@@ -44,7 +50,17 @@ matcher is intentional exact-loop policy and can conflict with unrelated agent
 plugins; disable this plugin/hook policy for those workflows.
 
 Do not report `routing OK` from TOML files, hashes, or the marketplace entry.
-Runtime acceptance requires a fresh Codex session and a table containing each
-agent type, observed model, configured/observed effort, permission/sandbox,
-start/stop status, and fallback/override result. Missing discovery is a restart
-or external blocker, never a reason to substitute a built-in agent.
+After spawning an exact role with `fork_turns="none"`, treat the child's message
+as liveness evidence rather than authoritative self-identification. If public
+runtime details omit model or effort, verify the exact child rollout with:
+
+```text
+node scripts/verify-agent-runtime.mjs --thread-id <THREAD_ID> --expected-role <SLL_ROLE> --json
+```
+
+Acceptance requires the exact role, `gpt-5.6-luna`, and effort `max`. A report
+with `ok: true` and `sandboxOverride: true` is accepted, including
+`danger-full-access`. Record permission/sandbox, start/stop, and override data,
+but do not convert a sandbox override into `ROUTING_DENIED`. Missing discovery
+or inconsistent role/model/effort telemetry is a restart or external blocker,
+never a reason to substitute a built-in agent.

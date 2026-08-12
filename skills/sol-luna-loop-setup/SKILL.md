@@ -55,7 +55,9 @@ Re-run `check` and `doctor` after every upgrade. A stale manifest is repaired by
 
 Installing or enabling this plugin does not trust its hooks automatically. Open
 `/hooks` in Codex, review the current hook definition, and trust it explicitly
-when you accept the routing policy. The `PreToolUse` hook denies prohibited
+after a new install or hook change when you accept the routing policy. Do not
+repeat this manual gate on every task: an observed `sol-luna-loop` hook message
+in the current session proves that the trusted hook executed. The `PreToolUse` hook denies prohibited
 agent spawns before execution on supported tool paths. A specialized spawn path
 may opt out of that event; `SubagentStart` then quarantines prohibited roles or
 a canonical role with a wrong reported model, using a no-tools/no-edits
@@ -75,35 +77,39 @@ alone.
 
 Codex reapplies the parent turn's live sandbox and approval overrides to every
 child. A custom agent's `sandbox_mode` is therefore its default, not a boundary
-that can override the active parent turn. When sandbox behavior is an acceptance
-gate, do not mix read-only and writing roles in one parent turn.
+that can override the active parent turn. `read-only`, `workspace-write`, and
+`danger-full-access` are all compatible parent sandboxes. Never block the loop,
+request separate tasks, or return `ROUTING_DENIED` solely because the live
+sandbox differs from a role's TOML default. Record the difference as an active
+parent override. When the user deliberately selected `danger-full-access`, all
+eight roles may run in that one parent task; their role-specific no-write or
+bounded-write instructions remain behavioral constraints.
 
-Use two fresh Sol/High verification turns. Start the first with a live
-`read-only` sandbox and run only:
-
-```text
-sll_luna_probe
-sll_luna_explorer
-sll_luna_reviewer
-sll_luna_security_auditor
-```
-
-Start the second with a live `workspace-write` sandbox and run only:
-
-```text
-sll_luna_implementer
-sll_luna_fixer
-sll_luna_test_engineer
-sll_luna_docs_writer
-```
+Only use separate `read-only` and `workspace-write` turns when the user
+explicitly asks to prove OS-enforced least-privilege behavior. That optional
+sandbox test is independent from the Luna/Max routing gate.
 
 Spawn every child with its explicit `agent_type` and `fork_turns="none"`; do not
-pass model or reasoning overrides. Record the observed `agent_type`, model,
-configured/observed effort, live sandbox, start/stop status, and any fallback or
-override. The required sequence in each turn is Sol/High parent -> Luna/Max child
--> Sol/High parent. If a role is not discoverable, or if its live sandbox does
-not match the verification turn, stop with `RESTART_REQUIRED` or
-`BLOCKED_RUNTIME_RESTART_REQUIRED` rather than falling back to a built-in agent.
+pass model or reasoning overrides. The child's own message is liveness evidence,
+not authoritative self-identification. Obtain the exact child thread ID from the
+spawn result and verify its local rollout from the plugin root:
+
+```text
+node scripts/verify-agent-runtime.mjs --thread-id <THREAD_ID> --expected-role <SLL_ROLE> --json
+```
+
+The verifier reads `$CODEX_HOME/sessions` or `~/.codex/sessions`, requires the
+exact role, `gpt-5.6-luna`, and effort `max`, and reports the live sandbox and
+approval settings. `ok: true` remains acceptance when `sandboxOverride: true`,
+including `danger-full-access`. Use public runtime details instead when they
+already expose the same facts; use the local verifier as the authoritative
+fallback when they omit model or effort.
+
+Record the observed role, model, effort, live sandbox, start/stop status, and
+any fallback or override. The required sequence is Sol/High parent -> Luna/Max
+child -> Sol/High parent. Stop only if the role is undiscoverable, the verifier
+reports a role/model/effort issue, or the telemetry is missing or inconsistent.
+Never fall back to a built-in agent.
 
 ## Uninstall
 

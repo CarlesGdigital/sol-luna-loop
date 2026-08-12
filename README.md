@@ -5,7 +5,7 @@ agents. The loop makes planning, implementation, review, testing, security,
 documentation, and final verification explicit, while preserving a fail-closed
 installer for user- and project-scoped custom agents.
 
-> Pinned release target: `v1.0.1`. The immutable marketplace command below is
+> Pinned release target: `v1.0.2`. The immutable marketplace command below is
 > supported once GitHub shows that public tag. Runtime routing must still be
 > verified after installation because static templates and hashes cannot prove
 > a live model.
@@ -24,7 +24,7 @@ The plugin does not call a model API and does not edit global `config.toml`.
 Add the pinned public marketplace source:
 
 ```text
-codex plugin marketplace add CarlesGdigital/sol-luna-loop --ref v1.0.1
+codex plugin marketplace add CarlesGdigital/sol-luna-loop --ref v1.0.2
 ```
 
 Open the Codex plugin browser with `/plugins` (or `codex /plugins`), select the
@@ -46,9 +46,11 @@ Installing the plugin does not silently trust hooks or copy custom agents. The
 setup command is explicit, idempotent, hash-checked, and preserves foreign
 files. A new Codex session is required after plugin or agent changes.
 
-Codex reapplies a parent turn's live sandbox override to its children. Verify
-the four read-only roles from a `read-only` parent turn and the four writing
-roles from a `workspace-write` parent turn. The hook denies prohibited roles on
+Codex reapplies a parent turn's live sandbox override to its children. A
+deliberately selected `danger-full-access` parent may run all eight roles in one
+task; the live override is recorded and does not invalidate Luna/Max routing.
+Matching `read-only` and `workspace-write` turns are needed only when separately
+testing OS-enforced least privilege. The hook denies prohibited roles on
 supported `PreToolUse` paths and quarantines a prohibited role at
 `SubagentStart` when a specialized spawn path bypasses `PreToolUse`; hooks remain
 guardrails, so the parent must also enforce the exact allow-list.
@@ -114,7 +116,9 @@ node scripts/bootstrap-agents.mjs doctor --scope user --json
 These commands prove package/installer health. They do not by themselves prove
 runtime routing. Routing is `OK` only after fresh Codex sessions observe all
 eight exact `sll_luna_*` agent types running as `gpt-5.6-luna` with `max`
-effort; the two sandbox groups must be verified in matching parent turns. See
+effort. Verify an exact child rollout with
+`node scripts/verify-agent-runtime.mjs --thread-id <THREAD_ID> --expected-role <SLL_ROLE> --json`;
+`sandboxOverride: true` is informational rather than a routing failure. See
 [Model routing](docs/MODEL_ROUTING.md).
 
 ## Documentation

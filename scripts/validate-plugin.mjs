@@ -40,7 +40,7 @@ export async function validatePluginRoot(pluginRoot) {
   const manifest = await readJson(path.join(root, ".codex-plugin", "plugin.json"), errors, "plugin manifest");
   if (!isObject(manifest)) return errors;
   if (manifest.name !== "sol-luna-loop") errors.push("manifest name must be sol-luna-loop");
-  if (manifest.version !== "1.0.1") errors.push("manifest version must be 1.0.1");
+  if (manifest.version !== "1.0.2") errors.push("manifest version must be 1.0.2");
   if (typeof manifest.description !== "string" || !manifest.description.trim()) errors.push("manifest description is required");
   if (manifest.license !== "MIT") errors.push("manifest license must be MIT");
   if (typeof manifest.repository !== "string" || !/^https:\/\/github\.com\/[A-Za-z0-9_.-]+\/sol-luna-loop$/.test(manifest.repository)) errors.push("manifest repository must be a real GitHub sol-luna-loop URL");

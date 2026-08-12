@@ -35,6 +35,6 @@ guardrail and inspect runtime evidence rather than assuming no child started.
 Refresh the pinned source:
 
 ```text
-codex plugin marketplace add CarlesGdigital/sol-luna-loop --ref v1.0.1
+codex plugin marketplace add CarlesGdigital/sol-luna-loop --ref v1.0.2
 codex plugin marketplace list
 ```

@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.0.2 - 2026-08-12
+
+- Added a cross-platform rollout verifier for exact child role, Luna model, and
+  Max effort evidence when public collaboration metadata omits those fields.
+- Accepted `danger-full-access` and other deliberate parent sandbox overrides
+  as compatible runtime evidence instead of blocking the loop.
+- Limited matching read-only/workspace-write turns to optional least-privilege
+  enforcement tests and stopped repeating the manual hook-trust gate after an
+  observed trusted hook execution.
+
 ## 1.0.1 - 2026-08-11
 
 - Fixed Windows hook command expansion by using Codex's `${PLUGIN_ROOT}`
