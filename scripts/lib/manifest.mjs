@@ -3,7 +3,7 @@ import { lstat, readFile } from "node:fs/promises";
 
 export const MANIFEST_SCHEMA_VERSION = 1;
 export const PLUGIN_NAME = "sol-luna-loop";
-export const PLUGIN_VERSION = "1.0.1";
+export const PLUGIN_VERSION = "1.0.2";
 export const MANIFEST_FILE_NAME = "sol-luna-loop.lock.json";
 export const LOCK_FILE_NAME = ".sol-luna-loop.lock";
 export const BACKUP_DIRECTORY_NAME = ".sol-luna-loop-backups";

@@ -95,7 +95,7 @@ test("user install writes exactly eight role files and an owned manifest", async
     const manifest = JSON.parse(await readFile(manifestFor(root), "utf8"));
     assert.equal(manifest.schemaVersion, 1);
     assert.equal(manifest.plugin, "sol-luna-loop");
-    assert.equal(manifest.pluginVersion, "1.0.1");
+    assert.equal(manifest.pluginVersion, "1.0.2");
     assert.equal(manifest.scope, "user");
     assert.deepEqual(Object.keys(manifest.agents), roles);
     for (const role of roles) {
@@ -357,7 +357,7 @@ test("a valid prior-version manifest upgrades without rewriting exact role files
     const payload = JSON.parse(result.stdout);
     assert.equal(payload.ok, true);
     assert.equal(payload.changed, true);
-    assert.equal(payload.manifest.pluginVersion, "1.0.1");
+    assert.equal(payload.manifest.pluginVersion, "1.0.2");
     for (const role of roles) assert.deepEqual(await readFile(targetFor(root, role)), roleBytes.get(role));
     const backupRuns = await readdir(path.join(agentsDir(root), ".sol-luna-loop-backups"));
     assert.equal(backupRuns.length, 1);
@@ -395,8 +395,8 @@ test("a prior-version manifest plus a canonical change backs up agent and manife
     assert.deepEqual(await readFile(path.join(backupRun, "sol-luna-loop.lock.json")), priorBytes);
     assert.notDeepEqual(await readFile(targetFor(root, role)), oldRole);
     const upgraded = JSON.parse(await readFile(manifestPath, "utf8"));
-    assert.equal(upgraded.pluginVersion, "1.0.1");
-    assert.equal(upgraded.agents[role].pluginVersion, "1.0.1");
+    assert.equal(upgraded.pluginVersion, "1.0.2");
+    assert.equal(upgraded.agents[role].pluginVersion, "1.0.2");
   });
 });
 

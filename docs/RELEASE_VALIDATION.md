@@ -4,6 +4,25 @@ This ledger separates deterministic package evidence, live Codex evidence, and
 external GitHub publication. Static files and child claims are not promoted to
 runtime proof.
 
+## v1.0.2 candidate - full-access routing correction
+
+This unreleased candidate changes the runtime gate, not the historical v1.0.1
+evidence below. `danger-full-access` is accepted as a deliberate live parent
+override and no longer blocks Luna/Max routing. Exact child telemetry can be
+verified with `scripts/verify-agent-runtime.mjs` when public collaboration
+details omit role, model, or effort.
+
+- Regression suite: 64/64 pass on 2026-08-12.
+- Exact prior TEMPRA child `019ff43e-7199-7ea3-8c6a-7d1e5791a201`: `ok:true`,
+  `sll_luna_probe`, `gpt-5.6-luna`, effort `max`, live
+  `danger-full-access`, `sandboxOverride:true`, zero issues.
+- Independent forward test: proceed; the child's old self-reported
+  `ROUTING_DENIED` is non-authoritative because the exact rollout proves the
+  required role/model/effort.
+- Plugin validation, package dry-run, syntax, and `git diff --check`: pass.
+- Publication, installed-cache upgrade, and post-restart hook/runtime smoke:
+  pending; do not describe v1.0.2 as released or installed yet.
+
 ## Status
 
 `VERIFIED_READY`

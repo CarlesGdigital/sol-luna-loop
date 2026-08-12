@@ -2,11 +2,11 @@
 
 ## GitHub marketplace after tag publication
 
-Confirm that GitHub shows the public `v1.0.1` tag before running the pinned
+Confirm that GitHub shows the public `v1.0.2` tag before running the pinned
 command:
 
 ```text
-codex plugin marketplace add CarlesGdigital/sol-luna-loop --ref v1.0.1
+codex plugin marketplace add CarlesGdigital/sol-luna-loop --ref v1.0.2
 ```
 
 Open `/plugins`, select `sol-luna-loop`, inspect the files, and install/enable
@@ -48,8 +48,17 @@ parent is Sol/High, then run one minimal probe for each exact `sll_luna_*` role.
 Record observed model, effort, sandbox, and fallback status. A file hash proves
 template integrity; only a fresh runtime observation proves routing.
 
-Run the four read-only roles from a parent turn whose live sandbox is
-`read-only`, then run the four writing roles from a parent turn whose live
-sandbox is `workspace-write`. Current Codex runtimes reapply the parent turn's
-live sandbox override to children, so mixing both groups in one verification
-turn cannot prove their distinct defaults.
+Current Codex runtimes reapply the parent turn's live sandbox override to
+children. `danger-full-access` is therefore compatible with every definitive
+role and must not block the loop; it is reported as an override of the TOML
+default. Use separate matching `read-only` and `workspace-write` turns only when
+explicitly testing their distinct least-privilege defaults.
+
+When the child cannot see its own model or effort, do not accept its
+`ROUTING_DENIED` as authoritative. Use the thread ID returned by the spawn:
+
+```text
+node scripts/verify-agent-runtime.mjs --thread-id <THREAD_ID> --expected-role <SLL_ROLE> --json
+```
+
+Continue when the report is `ok: true`, even if `sandboxOverride` is `true`.

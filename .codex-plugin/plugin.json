@@ -1,6 +1,6 @@
 {
   "name": "sol-luna-loop",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Codex-native Sol/High orchestration with Luna/Max implementation, adversarial review, testing, and self-correction.",
   "author": {
     "name": "CarlesGdigital",
